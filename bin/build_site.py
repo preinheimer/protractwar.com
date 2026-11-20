@@ -11,6 +11,19 @@ MAPS_PDF = "protractwar-maps.pdf"
 DOCROOT = os.path.join(ROOT, "docroot")
 
 
+def protractor_icon():
+    """Inline protractor glyph sized like an emoji (1em). Unicode has no protractor emoji."""
+    ticks = "".join(
+        f'<line x1="{x1:.2f}" y1="{y1:.2f}" x2="{x2:.2f}" y2="{y2:.2f}"/>'
+        for x1, y1, x2, y2 in (
+            (*pt(16, 22, d, 14), *pt(16, 22, d, 14 - (3.2 if d % 90 == 0 else 2.2))) for d in range(0, 181, 15)))
+    return ('<svg class="emoji-svg" viewBox="0 0 32 24" aria-hidden="true">'
+            '<path d="M2 22A14 14 0 0 1 30 22Z" fill="#fff4b8" stroke="#222" stroke-width="1.6" stroke-linejoin="round"/>'
+            '<path d="M9 22A7 7 0 0 1 23 22" fill="none" stroke="#222" stroke-width="1.2"/>'
+            f'<g stroke="#222" stroke-width="1.1" stroke-linecap="round">{ticks}</g>'
+            '<circle cx="16" cy="22" r="1.4" fill="#222"/></svg>')
+
+
 def hero_svg():
     W, H = 600, 380
     blobs = [(205, 245, 38, 1.0), (330, 140, 44, 2.3), (472, 248, 36, 4.1), (120, 92, 28, 3.3),
@@ -124,6 +137,7 @@ section.band.white { background: #fff; border-top: 2px solid var(--ink); border-
 .need { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 22px; }
 .need div { background: var(--card); border: 2px solid var(--ink); border-radius: 14px; padding: 16px; text-align: center; font-weight: 700; }
 .need .ic { font-size: 34px; display: block; margin-bottom: 4px; }
+.emoji-svg { width: 1.25em; height: 1em; vertical-align: -0.1em; }
 .need small { display: block; font-weight: 600; color: var(--muted); font-size: 14px; line-height: 1.35; margin-top: 4px; }
 .win { background: var(--sun); border: 2.5px solid var(--ink); border-radius: 14px; padding: 16px 22px; font-size: 21px;
   font-weight: 800; box-shadow: 4px 4px 0 var(--ink); }
@@ -208,7 +222,7 @@ def build():
 
 <section class="band white"><div class="wrap">
   <div class="why">
-    <div><h3>\U0001F4D0 Angle practice</h3><p>Every turn, players guess an angle, then check it with a real protractor.</p></div>
+    <div><h3>{protractor_icon()} Angle practice</h3><p>Every turn, players guess an angle, then check it with a real protractor.</p></div>
     <div><h3>✏️ Just paper</h3><p>No screens, no batteries. Print a map or draw your own on graph paper.</p></div>
     <div><h3>\U0001F3AF Easy to learn</h3><p>Ten short steps, each with a picture. Kids can teach it to each other.</p></div>
   </div>
@@ -220,7 +234,7 @@ def build():
   <div class="need">
     <div><span class="ic">\U0001F4C4</span>Graph or dot paper<small>or print one of our maps</small></div>
     <div><span class="ic">✏️</span>A sharp pencil<small>two coloured pencils are even better, one for each player</small></div>
-    <div><span class="ic">\U0001F4D0</span>A protractor</div>
+    <div><span class="ic">{protractor_icon()}</span>A protractor</div>
     <div><span class="ic">\U0001F4CF</span>A ruler</div>
   </div>
   <div class="win"><span>How to win:</span> Hit the other player’s base before they hit yours!</div>
