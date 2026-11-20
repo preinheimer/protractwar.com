@@ -60,22 +60,22 @@ def hero_svg():
     blobs = [(205, 245, 38, 1.0), (330, 140, 44, 2.3), (472, 248, 36, 4.1), (120, 92, 28, 3.3),
              (300, 384, 34, 5.2), (604, 160, 30, 0.6), (250, -4, 28, 2.8)]
     inner = "".join(blob(*b) for b in blobs)
-    inner += base(24, 316, 40, BLUE, BLUE_L) + base(536, 24, 40, RED, RED_L)
+    inner += base(24, 324, 40, BLUE, BLUE_L) + base(544, 24, 40, RED, RED_L)   # on the grid (4 + 20k)
     # three turns each. Red's missile: the third move is stopped by a blob
-    r0 = (556, 44)
+    r0 = (564, 44)
     r1 = pt(*r0, 200, 90)
     r2 = pt(*r1, 240, 70)
     hit = blob_hit(r2, 185, *blobs[1])
     inner += line(r0, r1, RED, 3) + dot(r1, RED, 4) + line(r1, r2, RED, 3) + dot(r2, RED, 4) + line(r2, hit, RED, 3)
     inner += burst(hit[0], hit[1], 10, 5, 8, "#ffd23f", RED) + dot(hit, RED, 3.5)
     # blue's missile: three moves, the last one hits red's base
-    b = [(44, 336), (260, 300), (420, 170), (556, 44)]
+    b = [(44, 344), (260, 300), (420, 170), (564, 44)]
     for i in range(1, len(b)):
         inner += line(b[i - 1], b[i], BLUE, 3)
     for p in b[1:-1]:
         inner += dot(p, BLUE, 4)
-    inner += burst(556, 44, 30, 15, 12) + (
-        f'<text x="556" y="49" font-size="13" font-weight="800" text-anchor="middle" fill="{RED}" '
+    inner += burst(564, 44, 30, 15, 12) + (
+        f'<text x="564" y="49" font-size="13" font-weight="800" text-anchor="middle" fill="{RED}" '
         f'font-family="Avenir Next, Helvetica, sans-serif">HIT!</text>')
     return svg(W, H, paper(W, H, 20, inner))
 

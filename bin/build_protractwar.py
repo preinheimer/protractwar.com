@@ -219,24 +219,24 @@ def bubble(x, y, w, h, tail, s, size=12):
 W, H = 300, 190
 
 
+# Grid lines in the figures sit at 4 + step * k (see paper()), so bases start on those lines to be exactly
+# 2 (or 3) squares wide.
 def fig_bases():
-    inner = (base(24, 126, 40, BLUE, BLUE_L, dot=False) + base(236, 24, 40, RED, RED_L, dot=False)
-             + line((24, 176), (64, 176), INK, 1) + line((24, 172), (24, 180), INK, 1) + line((64, 172), (64, 180), INK, 1)
-             + label(44, 140, "2 squares", 8.5) .replace('y="140.0"', 'y="187.0"'))
-    # dimension label placed under the base
-    inner = (base(24, 126, 40, BLUE, BLUE_L, dot=False) + base(236, 24, 40, RED, RED_L, dot=False)
-             + label(96, 150, "Blue base", 10, BLUE, "start") + label(204, 48, "Red base", 10, RED, "end")
-             + arrow((84, 160), (68, 172), INK, 1.2) + label(116, 175, "2 squares wide", 8.5, INK, "start"))
+    inner = (base(24, 124, 40, BLUE, BLUE_L, dot=False) + base(244, 24, 40, RED, RED_L, dot=False)
+             + label(74, 148, "Blue base", 10, BLUE, "start") + label(234, 48, "Red base", 10, RED, "end")
+             # dimension line above Blue's base: exactly its width
+             + line((24, 114), (64, 114), INK, 1) + line((24, 109), (24, 119), INK, 1) + line((64, 109), (64, 119), INK, 1)
+             + label(44, 104, "2 squares", 9, INK))
     return svg(W, H, paper(W, H, 20, inner))
 
 
 def fig_middle():
     s = 30
-    bx, by, bs = 105, 50, 60
+    bx, by, bs = 94, 34, 60
     inner = (base(bx, by, bs, BLUE, BLUE_L, dot=False)
              + line((bx, by), (bx + bs, by + bs), BLUE, 1.2, "4 3") + line((bx + bs, by), (bx, by + bs), BLUE, 1.2, "4 3")
              + dot((bx + bs / 2, by + bs / 2), BLUE, 4.5)
-             + arrow((215, 52), (141, 77), INK, 1.4) + label(218, 48, "Start here!", 11, INK, "start")
+             + arrow((205, 44), (130, 61), INK, 1.4) + label(208, 40, "Start here!", 11, INK, "start")
              + label(150, 150, "Tip: draw light lines corner to corner.", 9, INK)
              + label(150, 163, "The middle is where they cross.", 9, INK))
     return svg(W, H, paper(W, H, s, inner))
@@ -247,7 +247,7 @@ BLOBS = [(150, 92, 24, 1.0), (92, 6, 22, 2.3), (214, 186, 24, 4.1), (4, 80, 18, 
 
 
 def fig_obstacles():
-    inner = base(24, 126, 40, BLUE, BLUE_L) + base(236, 24, 40, RED, RED_L)
+    inner = base(24, 124, 40, BLUE, BLUE_L) + base(244, 24, 40, RED, RED_L)
     for b in BLOBS:
         inner += blob(*b)
     inner += f'<rect x="158" y="132" width="24" height="14" rx="2" fill="{BLOB_F}" stroke="{BLOB_S}" stroke-width="1.8"/>'
@@ -294,17 +294,17 @@ def fig_measure_first():
 
 
 def fig_measure_later():
-    s = (34, 176)
+    s = (44, 164)
     prev = 30
     p = pt(*s, prev, 120)
-    inner = base(14, 156, 40, BLUE, BLUE_L)
+    inner = base(24, 144, 40, BLUE, BLUE_L)
     inner += line(s, p, BLUE, 2.4)
     inner += dot(p, BLUE, 3.2)
     inner += line(p, pt(*p, prev, 80), BLUE, 1.2, "4 4")
     inner += protractor(*p, 58, prev)
     m = pt(*p, prev + 50, 66)
     inner += mark(m, prev + 50, BLUE) + label(m[0] - 20, m[1] - 2, "50°", 11, BLUE)
-    inner += label(64, 132, "last line", 9, BLUE)
+    inner += label(74, 120, "last line", 9, BLUE)
     tip = pt(*p, prev, 80)
     inner += label(tip[0] + 22, tip[1] + 16, "0° =", 8.5, INK) + label(tip[0] + 22, tip[1] + 27, "straight ahead", 8.5, INK)
     return svg(W, H, paper(W, H, 20, inner))
@@ -340,13 +340,13 @@ def fig_blob_hit():
 
 
 def fig_turns():
-    bs = (44, 154)
-    rs = (256, 36)
+    bs = (44, 144)
+    rs = (264, 44)
     bpath = [bs, pt(*bs, 40, 70)]
     bpath.append(pt(*bpath[-1], 15, 60))
     rpath = [rs, pt(*rs, 205, 70)]
     rpath.append(pt(*rpath[-1], 235, 55))
-    inner = base(24, 134, 40, BLUE, BLUE_L) + base(236, 16, 40, RED, RED_L)
+    inner = base(24, 124, 40, BLUE, BLUE_L) + base(244, 24, 40, RED, RED_L)
     n = 1
     for i in range(1, 3):
         inner += line(bpath[i - 1], bpath[i], BLUE, 2.4) + line(rpath[i - 1], rpath[i], RED, 2.4)
@@ -361,14 +361,14 @@ def fig_turns():
 
 
 def fig_hit():
-    rs = (256, 36)
+    rs = (264, 44)
     p1 = pt(*rs, 210, 110)
-    d2 = math.degrees(math.atan2(-(150 - p1[1]), 46 - p1[0]))
-    end = pt(*p1, d2, math.hypot(46 - p1[0], 150 - p1[1]))
-    inner = base(24, 134, 40, BLUE, BLUE_L) + base(236, 16, 40, RED, RED_L)
+    d2 = math.degrees(math.atan2(-(140 - p1[1]), 46 - p1[0]))
+    end = pt(*p1, d2, math.hypot(46 - p1[0], 140 - p1[1]))
+    inner = base(24, 124, 40, BLUE, BLUE_L) + base(244, 24, 40, RED, RED_L)
     inner += line(rs, p1, RED, 2.4) + dot(p1, RED, 3) + line(p1, end, RED, 2.6)
-    inner += burst(54, 146, 24, 13, 12) + text(54, 150, "HIT!", 10.5, RED)
-    inner += label(118, 110, "Crossing into the base counts!", 9.5, RED, "start")
+    inner += burst(54, 136, 24, 13, 12) + text(54, 140, "HIT!", 10.5, RED)
+    inner += label(292, 134, "Crossing into the base counts!", 9.5, RED, "end")
     return svg(W, H, paper(W, H, 20, inner))
 
 
@@ -399,6 +399,7 @@ def fig_tie():
     inner += label(75, 34, "Red: far from the dot", 9.5, RED)
     inner += label(225, 34, "Blue: closer!", 9.5, BLUE)
     inner += burst(225, 166, 16, 8, 5, "#ffd23f", INK) + text(225, 169, "WIN", 7.5)
+    inner = f'<g transform="translate(4,-16)">{inner}</g>'   # puts both bases on the 30px grid
     return svg(W, H, paper(W, H, s, inner))
 
 
