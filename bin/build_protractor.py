@@ -3,7 +3,7 @@ protractors to print on card stock and cut out. Print them to PDF with bin/build
 
 Paper isn't see-through, so unlike a plastic protractor the centre point sits right on the flat bottom edge (marked
 with a notch) and the bottom edge itself is the 0-180 line. Tick marks run to the curved edge, so you can make your
-mark on the paper right at the rim. Two scales (0 on the right, and 0 on the left) let you measure a turn either way
+mark on the paper right at the rim. Two scales (big numbers from the right, small numbers from the left) let you measure a turn either way
 without flipping the protractor over, since the back is blank.
 """
 import math
@@ -13,7 +13,8 @@ from build_protractwar import PAPERS, SRC, variant_name
 
 R = 45            # radius, mm
 PAD = 1.5         # room around the cut line for its stroke, mm
-INK, OUTER, INNER, MUTED, PAPER = "#1d232b", "#1d232b", "#1f5fbf", "#8a94a0", "#fffbe6"
+# black and white only, so it prints well on any printer
+INK, OUTER, INNER, MUTED, PAPER = "#000", "#000", "#444", "#888", "#fff"
 FONT = "'Avenir Next', Helvetica, sans-serif"
 
 
@@ -57,8 +58,6 @@ def protractor_svg():
     halo = f'stroke="{PAPER}" stroke-width="1.1" paint-order="stroke" stroke-linejoin="round"'   # readable over guides
     g.append(f'<text x="{cx}" y="{cy - 5.2}" font-size="2.2" font-weight="700" fill="{INK}" text-anchor="middle" '
              f'font-family="{FONT}" {halo}>put this point on your missile</text>')
-    g.append(f'<text x="{cx}" y="{cy - 17}" font-size="3.4" font-weight="800" fill="{INK}" text-anchor="middle" '
-             f'font-family="{FONT}" {halo}>Protract<tspan fill="#c8322b">war</tspan></text>')
     return (f'<svg viewBox="0 0 {w} {h}" width="{w}mm" height="{h}mm" xmlns="http://www.w3.org/2000/svg">'
             f'{"".join(g)}</svg>')
 
@@ -66,16 +65,14 @@ def protractor_svg():
 CSS = """
 @page { size: letter; margin: 0; }
 * { box-sizing: border-box; }
-body { margin: 0; font-family: 'Avenir Next', Helvetica, sans-serif; color: #1d232b; }
+body { margin: 0; font-family: 'Avenir Next', Helvetica, sans-serif; color: #000; }
 .page { width: PAGE_W; height: PAGE_H; padding: 11mm 10mm 8mm; display: flex; flex-direction: column; align-items: center; }
 .head { width: 186mm; margin-bottom: 5mm; }
 .head h1 { font-size: 15pt; margin: 0 0 1mm; }
-.head h1 span { color: #c8322b; }
-.head p { margin: 0; font-size: 9pt; color: #4a5260; line-height: 1.35; }
-.head b { color: #1d232b; }
+.head p { margin: 0; font-size: 9pt; color: #333; line-height: 1.35; }
+.head b { color: #000; }
 .grid { display: grid; grid-template-columns: repeat(2, auto); gap: GAP 6mm; justify-content: center; }
 svg { display: block; }
-.foot { margin-top: auto; font-size: 7.5pt; color: #9aa3ad; }
 """
 
 
@@ -85,15 +82,15 @@ def build(paper_size="letter"):
     css = (CSS.replace("size: letter;", f"size: {size};").replace("PAGE_W", w).replace("PAGE_H", h)
            .replace("GAP", gap))
     one = protractor_svg()
-    html = (f'<!doctype html><html><head><meta charset="utf-8"><title>Protractwar Protractors</title>'
+    html = (f'<!doctype html><html><head><meta charset="utf-8"><title>Cut-out Protractors</title>'
             f'<style>{css}</style></head><body><div class="page">'
-            '<div class="head"><h1>Protract<span>war</span> cut-out protractors</h1>'
+            '<div class="head"><h1>Cut-out protractors</h1>'
             '<p><b>Print at 100% (“Actual size”)</b>, on card stock if you have it. Cut along the outside line of '
             'each protractor. The <b>point on the flat edge</b> is the centre: put it on your missile and line up '
-            'the flat edge, then make your mark at the curved edge. Black numbers count up from the right, '
-            '<span style="color:#1f5fbf"><b>blue numbers</b></span> count up from the left.</p></div>'
+            'the flat edge, then make your mark at the curved edge. The <b>big numbers</b> count up from the right, '
+            'the small numbers count up from the left.</p></div>'
             f'<div class="grid">{one * 8}</div>'
-            '<div class="foot">protractwar.com</div></div></body></html>')
+            '</div></body></html>')
     with open(os.path.join(SRC, variant_name("protractor", paper_size, False) + ".html"), "w") as f:
         f.write(html)
 
