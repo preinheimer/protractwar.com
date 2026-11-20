@@ -253,7 +253,7 @@ def build():
     <h1>Protract<span>war</span></h1>
     <p class="tag"><b>Guess the angle.</b> <b>Draw the line.</b> <b>Hit the base!</b></p>
     <p class="lede">A free pencil-and-paper battle for two players. All you need is graph paper, a protractor, a ruler
-      and a sharp eye for angles. Great for grades 4 and 5.</p>
+      and a sharp eye for angles.</p>
     <div class="btns">
       <a class="btn primary" href="{RULES_PDF}" data-pdf="rules" data-dys="0" download>{DL_ICON} Get the rules (PDF)</a>
       <a class="btn secondary" href="{MAPS_PDF}" data-pdf="maps" data-dys="0" download>{DL_ICON} Get the maps (PDF)</a>
