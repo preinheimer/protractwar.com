@@ -105,11 +105,11 @@ PLAY = [
      "angle.</p><ul><li><b>First turn:</b> Line up the protractor with the edges of the paper.</li>"
      "<li><b>Every turn after that:</b> Line up the protractor with the last line you drew.</li></ul>",
      [(fig_measure_first(), "First turn"), (fig_measure_later(), "Every turn after that")]),
-    ("Launch your missile.", "<p>Use the ruler to draw a straight line from where your missile is now, through your "
-     "mark. You can make the line as long or as short as you want. Where your line ends is where your missile is "
-     "now.</p><ul><li><b>Watch out for blobs!</b> If your line runs into a blob, your missile stops right where it "
-     "touched. Your next turn starts from that spot. To stay away from a blob, stop your line before it gets "
-     "there.</li></ul>", [(fig_launch(), "Draw along the ruler"), (fig_blob_hit(), "Hitting a blob")]),
+    ("Launch your missile.", "<p>Use the ruler to draw a straight line from your missile through your mark, as "
+     "long or as short as you want. Your missile is now at the end of the line.</p><ul><li><b>Watch out for "
+     "blobs!</b> If your line touches a blob, your missile stops right there. To avoid a blob, stop your line "
+     "before it.</li><li><b>Crossing lines is fine.</b> Your line can cross any line on the paper, yours or the "
+     "other player’s.</li></ul>", [(fig_launch(), "Draw along the ruler"), (fig_blob_hit(), "Hitting a blob")]),
     ("Switch turns.", "<p>Now it’s the other player’s turn.</p>", [(fig_turns(), "")]),
     ("Keep going until someone’s base gets hit.", "<p>If your line crosses into the other player’s base, "
      "that counts as a hit!</p><ul><li><b>Tie?</b> If both players hit a base in the same round, the winner is the "
