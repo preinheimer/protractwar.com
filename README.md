@@ -30,3 +30,13 @@ a2enmod ssl rewrite headers expires deflate
 a2ensite protractwar.com
 apachectl configtest && systemctl reload apache2
 ```
+
+The site is now live over plain HTTP. The HTTPS vhosts are skipped until the cert exists.
+Get the cert, then reload. Apache turns on HTTPS and HTTP starts redirecting:
+
+```sh
+certbot certonly --webroot -w /var/www/protractwar.com/docroot \
+  -d protractwar.com -d www.protractwar.com \
+  --deploy-hook "systemctl reload apache2"
+systemctl reload apache2
+```
