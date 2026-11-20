@@ -16,6 +16,7 @@ Run the scripts from any directory:
 ```sh
 python3 bin/build_protractwar.py   # -> src/protractwar-rules*.html
 python3 bin/build_maps.py          # -> src/protractwar-maps*.html
+python3 bin/build_protractor.py    # -> src/protractwar-protractor*.html (cut-out protractors, Letter + A4)
 python3 bin/build_pdfs.py          # -> src/*.pdf via headless Chrome (set CHROME=... if needed); checks page counts
 python3 bin/build_site.py          # -> docroot/index.html + docroot/*.pdf
 python3 bin/build_play.py          # -> docroot/play.html (from src/play.template.html)

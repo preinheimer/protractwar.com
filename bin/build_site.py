@@ -8,6 +8,7 @@ from build_protractwar import (ROOT, SRC, VARIANTS, variant_name, BLUE, BLUE_L, 
 
 RULES_PDF = variant_name("rules", "letter", False) + ".pdf"
 MAPS_PDF = variant_name("maps", "letter", False) + ".pdf"
+PROTRACTOR_PDF = variant_name("protractor", "letter", False) + ".pdf"
 
 # Letter/A4 toggle. Links carry data-pdf (rules|maps) and data-dys (0|1); the default hrefs are Letter so the page
 # works without JavaScript. The choice is remembered per browser; first visits guess from the browser's locale.
@@ -196,6 +197,8 @@ figcaption { text-align: center; font-weight: 800; font-size: 14px; color: var(-
 .dl p { margin: 0; color: var(--muted); }
 .dl ul { margin: 0; padding-left: 20px; color: var(--muted); }
 .dl .btn { align-self: flex-start; margin-top: auto; }
+.dl article.wide { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr auto; gap: 10px 24px; align-items: center; }
+.dl article.wide .btn { margin-top: 0; }
 .paper { display: inline-flex; align-items: center; gap: 12px; margin: -10px 0 26px; flex-wrap: wrap; }
 .paper > span { font-weight: 800; }
 .paper .seg { display: inline-flex; border: 2.5px solid var(--ink); border-radius: 12px; overflow: hidden; }
@@ -213,7 +216,7 @@ footer b { color: var(--ink); }
 @media (max-width: 860px) {
   .hero .wrap { grid-template-columns: 1fr; gap: 32px; }
   .hero { padding-top: 34px; }
-  .why, .steps, .dl { grid-template-columns: 1fr; }
+  .why, .steps, .dl, .dl article.wide { grid-template-columns: 1fr; }
   .need { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 520px) {
@@ -277,7 +280,7 @@ def build():
   <div class="need">
     <div><span class="ic">\U0001F4C4</span>Graph or dot paper<small>or print one of our maps</small></div>
     <div><span class="ic">✏️</span>A sharp pencil<small>two coloured pencils are even better, one for each player</small></div>
-    <div><span class="ic">{protractor_icon()}</span>A protractor</div>
+    <div><span class="ic">{protractor_icon()}</span>A protractor<small>or <a href="#downloads">print our cut-out ones</a></small></div>
     <div><span class="ic">\U0001F4CF</span>A ruler</div>
   </div>
   <div class="win"><span>How to win:</span> Hit the other player’s base before they hit yours!</div>
@@ -302,7 +305,8 @@ def build():
     <button type="button" data-paper="letter" aria-pressed="true">Letter</button><button type="button" data-paper="a4" aria-pressed="false">A4</button>
   </div></div>
   <noscript><p class="intro">A4 versions: <a href="protractwar-rules-a4.pdf">rules</a>, <a href="protractwar-maps-a4.pdf">maps</a>,
-  <a href="protractwar-rules-dyslexic-a4.pdf">dyslexia-friendly rules</a>, <a href="protractwar-maps-dyslexic-a4.pdf">dyslexia-friendly maps</a>.</p></noscript>
+  <a href="protractwar-rules-dyslexic-a4.pdf">dyslexia-friendly rules</a>, <a href="protractwar-maps-dyslexic-a4.pdf">dyslexia-friendly maps</a>,
+  <a href="protractwar-protractor-a4.pdf">cut-out protractors</a>.</p></noscript>
   <div class="dl">
     <article>
       <h3>\U0001F4D6 The rules</h3>
@@ -321,6 +325,15 @@ def build():
       <p class="dys">\U0001F524 <a href="protractwar-maps-dyslexic.pdf" data-pdf="maps" data-dys="1" download>Dyslexia-friendly maps</a>
         <small>The map labels in the OpenDyslexic font.</small></p>
     </article>
+    <article class="wide">
+      <div>
+        <h3>{protractor_icon()} Cut-out protractors</h3>
+        <p>No protractor? Print a page of eight and cut them out. Card stock works best.</p>
+        <ul><li>The centre point is right on the flat edge, so you don’t need to see through it</li>
+          <li>Two scales, so you can measure a turn to the left or the right</li></ul>
+      </div>
+      <a class="btn secondary" href="{PROTRACTOR_PDF}" data-pdf="protractor" data-dys="0" download>{DL_ICON} Download protractors</a>
+    </article>
   </div>
 </div></section>
 
@@ -333,10 +346,10 @@ def build():
     os.makedirs(DOCROOT, exist_ok=True)
     with open(os.path.join(DOCROOT, "index.html"), "w") as f:
         f.write(html)
-    for kind in ("rules", "maps"):
-        for paper, dyslexic in VARIANTS:
-            name = variant_name(kind, paper, dyslexic) + ".pdf"
-            shutil.copy(os.path.join(SRC, name), os.path.join(DOCROOT, name))
+    names = [variant_name(kind, paper, dyslexic) for kind in ("rules", "maps") for paper, dyslexic in VARIANTS]
+    names += [variant_name("protractor", paper, False) for paper in ("letter", "a4")]
+    for name in names:
+        shutil.copy(os.path.join(SRC, name + ".pdf"), os.path.join(DOCROOT, name + ".pdf"))
 
 
 if __name__ == "__main__":

@@ -29,7 +29,9 @@ def find_chrome():
 
 
 def expected_pages(name):
-    """Everything is two pages, except the dyslexic rules, which need a third for the wider font."""
+    """Rules and maps are two pages, except the dyslexic rules (three, for the wider font); protractors are one."""
+    if name.startswith("protractwar-protractor"):
+        return 1
     return 3 if name.startswith("protractwar-rules-dyslexic") else 2
 
 
