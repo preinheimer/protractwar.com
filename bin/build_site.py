@@ -61,14 +61,15 @@ def hero_svg():
              (300, 384, 34, 5.2), (604, 160, 30, 0.6), (250, -4, 28, 2.8)]
     inner = "".join(blob(*b) for b in blobs)
     inner += base(24, 316, 40, BLUE, BLUE_L) + base(536, 24, 40, RED, RED_L)
-    # red's missile: two moves, the second stopped by a blob
+    # three turns each. Red's missile: the third move is stopped by a blob
     r0 = (556, 44)
-    r1 = pt(*r0, 205, 100)
-    hit = blob_hit(r1, 192, *blobs[1])
-    inner += line(r0, r1, RED, 3) + dot(r1, RED, 4) + line(r1, hit, RED, 3)
+    r1 = pt(*r0, 200, 90)
+    r2 = pt(*r1, 240, 70)
+    hit = blob_hit(r2, 185, *blobs[1])
+    inner += line(r0, r1, RED, 3) + dot(r1, RED, 4) + line(r1, r2, RED, 3) + dot(r2, RED, 4) + line(r2, hit, RED, 3)
     inner += burst(hit[0], hit[1], 10, 5, 8, "#ffd23f", RED) + dot(hit, RED, 3.5)
     # blue's missile: three moves, the last one hits red's base
-    b = [(44, 336), (150, 300), (290, 300), (420, 170), (556, 44)]
+    b = [(44, 336), (260, 300), (420, 170), (556, 44)]
     for i in range(1, len(b)):
         inner += line(b[i - 1], b[i], BLUE, 3)
     for p in b[1:-1]:
