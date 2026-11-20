@@ -20,6 +20,7 @@ python3 bin/build_protractor.py    # -> src/protractwar-protractor*.html (cut-ou
 python3 bin/build_pdfs.py          # -> src/*.pdf via headless Chrome (set CHROME=... if needed); checks page counts
 python3 bin/build_site.py          # -> docroot/index.html + docroot/*.pdf
 python3 bin/build_play.py          # -> docroot/play.html (from src/play.template.html)
+python3 bin/build_og.py            # -> docroot/og-image.png (link-preview card), apple-touch-icon.png, favicon.svg
 ```
 
 Each document is built in four variants: Letter, A4 (`-a4`), and dyslexia-friendly (`-dyslexic`, set in
@@ -30,6 +31,10 @@ locale and remembers the visitor's choice.
 `docroot/play.html` is an online two-player (same device) version of the game. It isn't linked from the main page
 and carries `noindex`. `bin/build_play.py` embeds the printed map's blob geometry so its "Printed map" matches the
 PDF; the page can also generate random maps.
+
+Link previews (LinkedIn, Facebook, Slack, iMessage, X) use the Open Graph tags in `bin/build_site.py` and
+`docroot/og-image.png`. After changing them, paste the URL into https://www.linkedin.com/post-inspector/ to check the
+card and refresh LinkedIn's cached copy.
 
 ## Hit counter
 

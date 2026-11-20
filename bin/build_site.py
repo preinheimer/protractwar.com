@@ -42,6 +42,12 @@ PAPER_JS = """<script>
 </script>"""
 DOCROOT = os.path.join(ROOT, "docroot")
 
+# also used for link previews (Open Graph), which need absolute URLs; docroot/og-image.png comes from bin/build_og.py
+SITE_URL = "https://protractwar.com/"
+TITLE = "Protractwar – a pencil-and-paper angle game"
+DESCRIPTION = ("Protractwar is a free pencil-and-paper game for two players. Guess an angle, measure it with a "
+               "protractor, and launch your missile at the other player's base.")
+
 
 def protractor_icon():
     """Inline protractor glyph sized like an emoji (1em). Unicode has no protractor emoji."""
@@ -241,8 +247,24 @@ def build():
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Protractwar – a pencil-and-paper angle game</title>
-<meta name="description" content="Protractwar is a free pencil-and-paper game for two players. Guess an angle, measure it with a protractor, and launch your missile at the other player's base.">
+<title>{TITLE}</title>
+<meta name="description" content="{DESCRIPTION}">
+<link rel="canonical" href="{SITE_URL}">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#fbfcfe">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Protractwar">
+<meta property="og:url" content="{SITE_URL}">
+<meta property="og:title" content="{TITLE}">
+<meta property="og:description" content="{DESCRIPTION}">
+<meta property="og:image" content="{SITE_URL}og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:alt" content="Protractwar: guess the angle, draw the line, hit the base! A map where blue's missile hits red's base.">
+<meta property="og:locale" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
