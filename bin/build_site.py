@@ -1,0 +1,274 @@
+"""Builds docroot/index.html (single-page promo site) and copies the PDFs next to it."""
+import os
+import shutil
+
+from build_protractwar import (ROOT, SRC, BLUE, BLUE_L, RED, RED_L, INK, base, blob, blob_hit, burst, dot, line, paper, pt, svg,
+                               fig_bases, fig_middle, fig_obstacles, fig_first_clean, fig_guess, fig_measure_first,
+                               fig_measure_later, fig_launch, fig_blob_hit, fig_turns, fig_hit, fig_tie, fig_gg)
+
+RULES_PDF = "protractwar-rules.pdf"
+MAPS_PDF = "protractwar-maps.pdf"
+DOCROOT = os.path.join(ROOT, "docroot")
+
+
+def hero_svg():
+    W, H = 600, 380
+    blobs = [(205, 245, 38, 1.0), (330, 140, 44, 2.3), (472, 248, 36, 4.1), (120, 92, 28, 3.3),
+             (300, 384, 34, 5.2), (604, 160, 30, 0.6), (250, -4, 28, 2.8)]
+    inner = "".join(blob(*b) for b in blobs)
+    inner += base(24, 316, 40, BLUE, BLUE_L) + base(536, 24, 40, RED, RED_L)
+    # red's missile: two moves, the second stopped by a blob
+    r0 = (556, 44)
+    r1 = pt(*r0, 205, 100)
+    hit = blob_hit(r1, 192, *blobs[1])
+    inner += line(r0, r1, RED, 3) + dot(r1, RED, 4) + line(r1, hit, RED, 3)
+    inner += burst(hit[0], hit[1], 10, 5, 8, "#ffd23f", RED) + dot(hit, RED, 3.5)
+    # blue's missile: three moves, the last one hits red's base
+    b = [(44, 336), (150, 300), (290, 300), (420, 170), (556, 44)]
+    for i in range(1, len(b)):
+        inner += line(b[i - 1], b[i], BLUE, 3)
+    for p in b[1:-1]:
+        inner += dot(p, BLUE, 4)
+    inner += burst(556, 44, 30, 15, 12) + (
+        f'<text x="556" y="49" font-size="13" font-weight="800" text-anchor="middle" fill="{RED}" '
+        f'font-family="Avenir Next, Helvetica, sans-serif">HIT!</text>')
+    return svg(W, H, paper(W, H, 20, inner))
+
+
+def card(n, title, body, figs):
+    fh = "".join(f'<figure>{f}{"<figcaption>" + c + "</figcaption>" if c else ""}</figure>' for f, c in figs)
+    cls = "figs two" if len(figs) > 1 else "figs"
+    return (f'<article class="step"><div class="step-head"><span class="num">{n}</span><h3>{title}</h3></div>'
+            f'<div class="step-body">{body}</div><div class="{cls}">{fh}</div></article>')
+
+
+SETUP = [
+    ("Draw your bases.", "<p>Each player draws a square in their own corner of the paper. Both squares must be the same "
+     "size. For example, each side could be 2 squares long.</p>", [(fig_bases(), "")]),
+    ("Mark the middle.", "<p>Put a dot in the centre of each base. This is where your missile starts.</p>",
+     [(fig_middle(), "")]),
+    ("Add obstacles.", "<p>Take turns drawing blobs and other shapes on the paper. Make some of them touch the edge of "
+     "the paper.</p>", [(fig_obstacles(), "")]),
+    ("Pick who goes first.", "<p>The player who said the word “angle” most recently goes first.</p>",
+     [(fig_first_clean(), "")]),
+]
+
+PLAY = [
+    ("Guess an angle.", "<p>On your turn, say an angle out loud, like “45 degrees.” You may look at the "
+     "protractor, but you may not place it on the paper.</p>", [(fig_guess(), "")]),
+    ("Measure it.", "<p>Put the protractor on the paper and find the angle you said. Make a small mark at that "
+     "angle.</p><ul><li><b>First turn:</b> Line up the protractor with the edges of the paper.</li>"
+     "<li><b>Every turn after that:</b> Line up the protractor with the last line you drew.</li></ul>",
+     [(fig_measure_first(), "First turn"), (fig_measure_later(), "Every turn after that")]),
+    ("Launch your missile.", "<p>Use the ruler to draw a straight line from where your missile is now, through your "
+     "mark. You can make the line as long or as short as you want. Where your line ends is where your missile is "
+     "now.</p><ul><li><b>Watch out for blobs!</b> If your line runs into a blob, your missile stops right where it "
+     "touched. Your next turn starts from that spot. To stay away from a blob, stop your line before it gets "
+     "there.</li></ul>", [(fig_launch(), "Draw along the ruler"), (fig_blob_hit(), "Hitting a blob")]),
+    ("Switch turns.", "<p>Now it’s the other player’s turn.</p>", [(fig_turns(), "")]),
+    ("Keep going until someone’s base gets hit.", "<p>If your line crosses into the other player’s base, "
+     "that counts as a hit!</p><ul><li><b>Tie?</b> If both players hit a base in the same round, the winner is the "
+     "player whose line passed closest to the dot in the middle of the base.</li></ul>",
+     [(fig_hit(), "A hit!"), (fig_tie(), "Breaking a tie")]),
+    ("Say “good game”", "<p>Shake hands! \U0001F642</p>", [(fig_gg(), "")]),
+]
+
+DL_ICON = ('<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 '
+           '19h16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" '
+           'stroke-linejoin="round"/></svg>')
+
+CSS = """
+:root { --ink:#1d232b; --muted:#56606c; --blue:#1f5fbf; --blue-l:#dbe7fa; --red:#c8322b; --red-l:#fbdedb;
+  --paper:#fbfcfe; --grid:#e3e8ef; --card:#ffffff; --line:#d6dbe1; --sun:#ffd23f; color-scheme: light; }
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; color: var(--ink); font-family: 'Nunito', 'Avenir Next', Helvetica, sans-serif; font-size: 18px;
+  line-height: 1.55; background-color: var(--paper);
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 24px 24px; }
+h1, h2, h3 { font-family: 'Baloo 2', 'Arial Rounded MT Bold', sans-serif; line-height: 1.1; margin: 0; }
+a { color: var(--blue); }
+.wrap { max-width: 1100px; margin: 0 auto; padding: 0 20px; }
+header.top { position: sticky; top: 0; z-index: 5; background: rgba(251,252,254,.92); backdrop-filter: blur(6px);
+  border-bottom: 2px solid var(--ink); }
+header.top .wrap { display: flex; align-items: center; justify-content: space-between; height: 60px; gap: 16px; }
+.logo { font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 26px; text-decoration: none; color: var(--ink); }
+.logo span, h1 span { color: var(--red); }
+nav a { margin-left: 22px; font-weight: 700; text-decoration: none; color: var(--ink); white-space: nowrap; }
+nav a:hover { color: var(--blue); }
+.hero { padding: 56px 0 40px; }
+.hero .wrap { display: grid; grid-template-columns: 1fr 1.15fr; gap: 44px; align-items: center; }
+.hero h1 { font-size: clamp(54px, 8vw, 92px); font-weight: 800; letter-spacing: -1px; }
+.tag { font-family: 'Baloo 2', sans-serif; font-size: clamp(21px, 2.3vw, 27px); font-weight: 700; margin: 6px 0 14px; line-height: 1.3; }
+.tag b { white-space: nowrap; }
+.tag b:nth-child(1) { color: var(--blue); } .tag b:nth-child(2) { color: var(--ink); } .tag b:nth-child(3) { color: var(--red); }
+.lede { font-size: 19px; color: var(--muted); margin: 0 0 26px; max-width: 30em; }
+.btns { display: flex; flex-wrap: wrap; gap: 12px; }
+.btn { display: inline-flex; align-items: center; gap: 10px; padding: 13px 22px; border-radius: 12px; font-weight: 800;
+  text-decoration: none; border: 2.5px solid var(--ink); box-shadow: 4px 4px 0 var(--ink); transition: transform .1s, box-shadow .1s; }
+.btn:hover { transform: translate(-2px,-2px); box-shadow: 6px 6px 0 var(--ink); }
+.btn:active { transform: translate(2px,2px); box-shadow: 2px 2px 0 var(--ink); }
+.btn.primary { background: var(--blue); color: #fff; }
+.btn.secondary { background: #fff; color: var(--ink); }
+.hero-art { border: 2.5px solid var(--ink); border-radius: 14px; overflow: hidden; background: #fff; box-shadow: 8px 8px 0 var(--ink);
+  transform: rotate(1.2deg); }
+.hero-art svg { display: block; width: 100%; height: auto; }
+section.band { padding: 54px 0; }
+section.band.white { background: #fff; border-top: 2px solid var(--ink); border-bottom: 2px solid var(--ink); }
+.band h2 { font-size: clamp(34px, 4.5vw, 46px); font-weight: 800; margin-bottom: 8px; }
+.band .intro { color: var(--muted); margin: 0 0 28px; }
+.why { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.why div { background: var(--card); border: 2px solid var(--ink); border-radius: 14px; padding: 18px 20px; }
+.why h3 { font-size: 22px; margin-bottom: 4px; }
+.why p { margin: 0; color: var(--muted); }
+.need { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 22px; }
+.need div { background: var(--card); border: 2px solid var(--ink); border-radius: 14px; padding: 16px; text-align: center; font-weight: 700; }
+.need .ic { font-size: 34px; display: block; margin-bottom: 4px; }
+.need small { display: block; font-weight: 600; color: var(--muted); font-size: 14px; line-height: 1.35; margin-top: 4px; }
+.win { background: var(--sun); border: 2.5px solid var(--ink); border-radius: 14px; padding: 16px 22px; font-size: 21px;
+  font-weight: 800; box-shadow: 4px 4px 0 var(--ink); }
+.win span { font-family: 'Baloo 2', sans-serif; margin-right: 8px; }
+.steps { display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px; }
+.step { background: var(--card); border: 2px solid var(--ink); border-radius: 16px; padding: 20px 22px; display: flex;
+  flex-direction: column; }
+.step-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.num { flex: none; width: 38px; height: 38px; border-radius: 50%; background: var(--ink); color: #fff; font-weight: 800;
+  display: grid; place-items: center; font-size: 19px; }
+.step h3 { font-size: 24px; font-weight: 700; }
+.step-body p { margin: 0 0 8px; }
+.step-body ul { margin: 0 0 8px; padding-left: 22px; }
+.step-body li { margin-bottom: 4px; }
+.figs { margin-top: auto; padding-top: 10px; display: grid; gap: 12px; }
+.figs.two { grid-template-columns: 1fr 1fr; }
+figure { margin: 0; }
+figure svg { width: 100%; height: auto; display: block; border-radius: 6px; }
+figcaption { text-align: center; font-weight: 800; font-size: 14px; color: var(--muted); margin-top: 4px; }
+.dl { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.dl article { background: var(--card); border: 2.5px solid var(--ink); border-radius: 16px; padding: 24px; box-shadow: 6px 6px 0 var(--ink);
+  display: flex; flex-direction: column; gap: 10px; }
+.dl h3 { font-size: 28px; }
+.dl p { margin: 0; color: var(--muted); }
+.dl ul { margin: 0; padding-left: 20px; color: var(--muted); }
+.dl .btn { align-self: flex-start; margin-top: auto; }
+.tip { font-size: 15px; background: var(--blue-l); border-radius: 10px; padding: 10px 14px; color: var(--ink); }
+footer { padding: 34px 0 44px; text-align: center; color: var(--muted); font-size: 16px; }
+footer b { color: var(--ink); }
+@media (max-width: 860px) {
+  .hero .wrap { grid-template-columns: 1fr; gap: 32px; }
+  .hero { padding-top: 34px; }
+  .why, .steps, .dl { grid-template-columns: 1fr; }
+  .need { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 520px) {
+  body { font-size: 17px; }
+  .wrap { padding: 0 16px; }
+  nav a { margin-left: 12px; font-size: 15px; }
+  .logo { font-size: 22px; }
+  nav a.hide-s { display: none; }
+  .figs.two { grid-template-columns: 1fr; }
+  .hero-art { transform: none; box-shadow: 5px 5px 0 var(--ink); }
+}
+"""
+
+
+def build():
+    setup = "".join(card(i + 1, *s) for i, s in enumerate(SETUP))
+    play = "".join(card(i + 1, *s) for i, s in enumerate(PLAY))
+    html = f"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Protractwar – a pencil-and-paper angle game</title>
+<meta name="description" content="Protractwar is a free pencil-and-paper game for two players. Guess an angle, measure it with a protractor, and launch your missile at the other player's base.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>{CSS}</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="logo" href="#">Protract<span>war</span></a>
+  <nav><a class="hide-s" href="#setup">Getting ready</a><a href="#play">How to play</a><a href="#downloads">Downloads</a></nav>
+</div></header>
+
+<section class="hero"><div class="wrap">
+  <div>
+    <h1>Protract<span>war</span></h1>
+    <p class="tag"><b>Guess the angle.</b> <b>Draw the line.</b> <b>Hit the base!</b></p>
+    <p class="lede">A free pencil-and-paper battle for two players. All you need is graph paper, a protractor, a ruler
+      and a sharp eye for angles. Great for grades 4 and 5.</p>
+    <div class="btns">
+      <a class="btn primary" href="{RULES_PDF}" download>{DL_ICON} Get the rules (PDF)</a>
+      <a class="btn secondary" href="{MAPS_PDF}" download>{DL_ICON} Get the maps (PDF)</a>
+    </div>
+  </div>
+  <div class="hero-art" role="img" aria-label="A Protractwar map: blue's missile zig-zags around blobs and hits red's base">{hero_svg()}</div>
+</div></section>
+
+<section class="band white"><div class="wrap">
+  <div class="why">
+    <div><h3>\U0001F4D0 Angle practice</h3><p>Every turn, players guess an angle, then check it with a real protractor.</p></div>
+    <div><h3>✏️ Just paper</h3><p>No screens, no batteries. Print a map or draw your own on graph paper.</p></div>
+    <div><h3>\U0001F3AF Easy to learn</h3><p>Ten short steps, each with a picture. Kids can teach it to each other.</p></div>
+  </div>
+</div></section>
+
+<section class="band" id="need"><div class="wrap">
+  <h2>What you need</h2>
+  <p class="intro">Two players and a few things from your pencil case.</p>
+  <div class="need">
+    <div><span class="ic">\U0001F4C4</span>Graph or dot paper<small>or print one of our maps</small></div>
+    <div><span class="ic">✏️</span>A sharp pencil<small>two coloured pencils are even better, one for each player</small></div>
+    <div><span class="ic">\U0001F4D0</span>A protractor</div>
+    <div><span class="ic">\U0001F4CF</span>A ruler</div>
+  </div>
+  <div class="win"><span>How to win:</span> Hit the other player’s base before they hit yours!</div>
+</div></section>
+
+<section class="band white" id="setup"><div class="wrap">
+  <h2>Getting ready</h2>
+  <p class="intro">Set up the paper before the first missile flies.</p>
+  <div class="steps">{setup}</div>
+</div></section>
+
+<section class="band" id="play"><div class="wrap">
+  <h2>How to play</h2>
+  <p class="intro">Take turns. Each turn, your missile moves one straight line.</p>
+  <div class="steps">{play}</div>
+</div></section>
+
+<section class="band white" id="downloads"><div class="wrap">
+  <h2>Print and play</h2>
+  <p class="intro">Free PDFs, sized for letter paper.</p>
+  <div class="dl">
+    <article>
+      <h3>\U0001F4D6 The rules</h3>
+      <p>All the instructions on this page, with pictures, on two pages.</p>
+      <ul><li>Page 1: what you need and getting ready</li><li>Page 2: how to play</li></ul>
+      <a class="btn primary" href="{RULES_PDF}" download>{DL_ICON} Download rules</a>
+    </article>
+    <article>
+      <h3>\U0001F5FA️ The maps</h3>
+      <p>A ready-to-play sheet with bases already drawn. Print it double-sided.</p>
+      <ul><li>Side 1: a map full of blobs</li><li>Side 2: an open map to add your own</li></ul>
+      <p class="tip">Print at 100% (“Actual size”) so each grid square is exactly 5 mm.</p>
+      <a class="btn secondary" href="{MAPS_PDF}" download>{DL_ICON} Download maps</a>
+    </article>
+  </div>
+</div></section>
+
+<footer><div class="wrap">
+  Created by <b>Alexander &amp; Paul Reinheimer</b> · <a href="https://protractwar.com">protractwar.com</a>
+</div></footer>
+</body>
+</html>"""
+    os.makedirs(DOCROOT, exist_ok=True)
+    with open(os.path.join(DOCROOT, "index.html"), "w") as f:
+        f.write(html)
+    shutil.copy(os.path.join(SRC, "Protractwar.pdf"), os.path.join(DOCROOT, RULES_PDF))
+    shutil.copy(os.path.join(SRC, "Protractwar_Maps.pdf"), os.path.join(DOCROOT, MAPS_PDF))
+
+
+if __name__ == "__main__":
+    build()
