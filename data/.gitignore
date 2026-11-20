@@ -1,0 +1,3 @@
+# The hit counter (docroot/counter.php) stores its count here. The hits file is server data, not code.
+*
+!.gitignore

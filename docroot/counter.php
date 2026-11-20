@@ -6,14 +6,15 @@
  * local filesystem, so simultaneous hits never overwrite each other and no locking is needed. Two visitors at the
  * same instant may be shown the same number; neither hit is lost.
  *
- * The file lives outside the repo and docroot (see README). To start from a number: head -c 12345 /dev/zero > hits
+ * The file is data/hits at the project root, outside the docroot so it isn't served, and ignored by git so a
+ * deploy never resets it (see README). To start from a number: head -c 12345 /dev/zero > data/hits
  */
 declare(strict_types=1);
 
 const DIGITS = 6;    // pad to at least this many digits, odometer-style
 
 // override with SetEnv PROTRACTWAR_HITS_FILE (Apache) or the environment (local testing)
-$file = $_SERVER['PROTRACTWAR_HITS_FILE'] ?? (getenv('PROTRACTWAR_HITS_FILE') ?: '/var/lib/protractwar/hits');
+$file = $_SERVER['PROTRACTWAR_HITS_FILE'] ?? (getenv('PROTRACTWAR_HITS_FILE') ?: dirname(__DIR__) . '/data/hits');
 
 $count = null;
 $fh = @fopen($file, 'ab');
