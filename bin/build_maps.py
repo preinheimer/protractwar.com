@@ -1,9 +1,9 @@
-"""Builds src/protractwar_maps.html: two printable letter-size maps (1 cm grid).
+"""Builds the maps HTML in src/: two printable maps (1 cm grid), one file per paper size and font variant.
 Side 1 has blobs, side 2 is open. Print to PDF with headless Chrome."""
 import math
 import os
 
-from build_protractwar import SRC, blob_r
+from build_protractwar import PAPERS, SRC, VARIANTS, blob_r, dyslexic_css, variant_name
 
 GW, GH = 19, 25            # grid size in cm
 BLUE, RED = "#1f5fbf", "#c8322b"
@@ -76,7 +76,7 @@ def map_svg(with_blobs):
 CSS = """
 @page { size: letter; margin: 0; }
 body { margin: 0; font-family: 'Avenir Next', Helvetica, sans-serif; }
-.page { width: 8.5in; height: 11in; display: flex; flex-direction: column; align-items: center; justify-content: center;
+.page { width: PAGE_W; height: PAGE_H; display: flex; flex-direction: column; align-items: center; justify-content: center;
         break-after: page; }
 .page:last-child { break-after: auto; }
 .foot { width: 19cm; display: flex; justify-content: space-between; font-size: 8pt; color: #9aa3ad; margin-top: 4px; }
@@ -89,7 +89,17 @@ def page(with_blobs, label):
             f'<span>1 square = 5 mm · protractwar.com</span></div></div>')
 
 
-html = (f'<!doctype html><html><head><meta charset="utf-8"><title>Protractwar Maps</title><style>{CSS}</style></head>'
-        f'<body>{page(True, "Map with blobs")}{page(False, "Open map")}</body></html>')
-with open(os.path.join(SRC, "protractwar_maps.html"), "w") as f:
-    f.write(html)
+def build(paper="letter", dyslexic=False):
+    size, w, h = PAPERS[paper]
+    css = CSS.replace("size: letter;", f"size: {size};").replace("PAGE_W", w).replace("PAGE_H", h)
+    if dyslexic:
+        css += dyslexic_css()
+    html = (f'<!doctype html><html><head><meta charset="utf-8"><title>Protractwar Maps</title><style>{css}</style></head>'
+            f'<body>{page(True, "Map with blobs")}{page(False, "Open map")}</body></html>')
+    with open(os.path.join(SRC, variant_name("maps", paper, dyslexic) + ".html"), "w") as f:
+        f.write(html)
+
+
+if __name__ == "__main__":
+    for paper, dyslexic in VARIANTS:
+        build(paper, dyslexic)

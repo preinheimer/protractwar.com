@@ -6,7 +6,7 @@ Static promo site for Protractwar.
 
 - `docroot/` — public web root (served by Apache). Generated; don't hand-edit `index.html`.
 - `bin/` — Python build scripts.
-- `src/` — rules and maps HTML and the PDFs printed from them.
+- `src/` — generated rules and maps HTML/PDFs (Letter, A4, and dyslexia-friendly versions of each), and the OpenDyslexic font.
 - `noweb/apache/protractwar.com.conf` — Apache vhost.
 
 ## Building
@@ -14,11 +14,16 @@ Static promo site for Protractwar.
 Run the scripts from any directory:
 
 ```sh
-python3 bin/build_protractwar.py   # -> src/protractwar.html
-python3 bin/build_maps.py          # -> src/protractwar_maps.html
-# print both to src/Protractwar.pdf and src/Protractwar_Maps.pdf with headless Chrome
+python3 bin/build_protractwar.py   # -> src/protractwar-rules*.html
+python3 bin/build_maps.py          # -> src/protractwar-maps*.html
+python3 bin/build_pdfs.py          # -> src/*.pdf via headless Chrome (set CHROME=... if needed); checks page counts
 python3 bin/build_site.py          # -> docroot/index.html + docroot/*.pdf
 ```
+
+Each document is built in four variants: Letter, A4 (`-a4`), and dyslexia-friendly (`-dyslexic`, set in
+OpenDyslexic, SIL OFL — see `src/fonts/opendyslexic/LICENSE`) in both sizes. The dyslexic rules are three pages
+instead of two, because OpenDyslexic is much wider. The site's Letter/A4 toggle picks a default from the browser
+locale and remembers the visitor's choice.
 
 ## Deploying
 

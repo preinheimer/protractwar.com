@@ -2,12 +2,43 @@
 import os
 import shutil
 
-from build_protractwar import (ROOT, SRC, BLUE, BLUE_L, RED, RED_L, INK, base, blob, blob_hit, burst, dot, line, paper, pt, svg,
+from build_protractwar import (ROOT, SRC, VARIANTS, variant_name, BLUE, BLUE_L, RED, RED_L, INK, base, blob, blob_hit, burst, dot, line, paper, pt, svg,
                                fig_bases, fig_middle, fig_obstacles, fig_first_clean, fig_guess, fig_measure_first,
                                fig_measure_later, fig_launch, fig_blob_hit, fig_turns, fig_hit, fig_tie, fig_gg)
 
-RULES_PDF = "protractwar-rules.pdf"
-MAPS_PDF = "protractwar-maps.pdf"
+RULES_PDF = variant_name("rules", "letter", False) + ".pdf"
+MAPS_PDF = variant_name("maps", "letter", False) + ".pdf"
+
+# Letter/A4 toggle. Links carry data-pdf (rules|maps) and data-dys (0|1); the default hrefs are Letter so the page
+# works without JavaScript. The choice is remembered per browser; first visits guess from the browser's locale.
+PAPER_JS = """<script>
+(function () {
+  var LETTER = ["US", "CA", "MX", "PH", "CL", "CO", "VE", "CR", "GT", "PA", "PR", "DO", "SV"];
+  function guess() {
+    var m = (navigator.language || "").match(/-([A-Za-z]{2})\\b/);
+    return m && LETTER.indexOf(m[1].toUpperCase()) === -1 ? "a4" : "letter";
+  }
+  function saved() { try { return localStorage.getItem("paper"); } catch (e) { return null; } }
+  function set(paper, remember) {
+    if (remember) { try { localStorage.setItem("paper", paper); } catch (e) {} }
+    document.querySelectorAll("a[data-pdf]").forEach(function (a) {
+      a.href = "protractwar-" + a.dataset.pdf + (a.dataset.dys === "1" ? "-dyslexic" : "") +
+               (paper === "a4" ? "-a4" : "") + ".pdf";
+    });
+    document.querySelectorAll(".paper button").forEach(function (b) {
+      b.setAttribute("aria-pressed", b.dataset.paper === paper ? "true" : "false");
+    });
+  }
+  var toggle = document.querySelector(".paper");
+  toggle.hidden = false;
+  toggle.addEventListener("click", function (e) {
+    var b = e.target.closest("button");
+    if (b) set(b.dataset.paper, true);
+  });
+  var p = saved();
+  set(p === "a4" || p === "letter" ? p : guess(), false);
+})();
+</script>"""
 DOCROOT = os.path.join(ROOT, "docroot")
 
 
@@ -164,6 +195,17 @@ figcaption { text-align: center; font-weight: 800; font-size: 14px; color: var(-
 .dl p { margin: 0; color: var(--muted); }
 .dl ul { margin: 0; padding-left: 20px; color: var(--muted); }
 .dl .btn { align-self: flex-start; margin-top: auto; }
+.paper { display: inline-flex; align-items: center; gap: 12px; margin: -10px 0 26px; flex-wrap: wrap; }
+.paper > span { font-weight: 800; }
+.paper .seg { display: inline-flex; border: 2.5px solid var(--ink); border-radius: 12px; overflow: hidden; }
+.paper button { font: inherit; font-weight: 800; padding: 8px 18px; border: 0; background: var(--card); color: var(--ink);
+  cursor: pointer; }
+.paper button + button { border-left: 2.5px solid var(--ink); }
+.paper button[aria-pressed="true"] { background: var(--ink); color: #fff; }
+.paper button:focus-visible { outline: 3px solid var(--sun); outline-offset: -5px; }
+.dys { margin-top: 2px; font-size: 16px; font-weight: 700; }
+.dys a { color: var(--blue); }
+.dys small { display: block; font-weight: 600; color: var(--muted); font-size: 14px; }
 .tip { font-size: 15px; background: var(--blue-l); border-radius: 10px; padding: 10px 14px; color: var(--ink); }
 footer { padding: 34px 0 44px; text-align: center; color: var(--muted); font-size: 16px; }
 footer b { color: var(--ink); }
@@ -213,8 +255,8 @@ def build():
     <p class="lede">A free pencil-and-paper battle for two players. All you need is graph paper, a protractor, a ruler
       and a sharp eye for angles. Great for grades 4 and 5.</p>
     <div class="btns">
-      <a class="btn primary" href="{RULES_PDF}" download>{DL_ICON} Get the rules (PDF)</a>
-      <a class="btn secondary" href="{MAPS_PDF}" download>{DL_ICON} Get the maps (PDF)</a>
+      <a class="btn primary" href="{RULES_PDF}" data-pdf="rules" data-dys="0" download>{DL_ICON} Get the rules (PDF)</a>
+      <a class="btn secondary" href="{MAPS_PDF}" data-pdf="maps" data-dys="0" download>{DL_ICON} Get the maps (PDF)</a>
     </div>
   </div>
   <div class="hero-art" role="img" aria-label="A Protractwar map: blue's missile zig-zags around blobs and hits red's base">{hero_svg()}</div>
@@ -254,20 +296,29 @@ def build():
 
 <section class="band white" id="downloads"><div class="wrap">
   <h2>Print and play</h2>
-  <p class="intro">Free PDFs, sized for letter paper.</p>
+  <p class="intro">Free PDFs for Letter or A4 paper.</p>
+  <div class="paper" role="group" aria-label="Paper size" hidden><span>Paper size:</span><div class="seg">
+    <button type="button" data-paper="letter" aria-pressed="true">Letter</button><button type="button" data-paper="a4" aria-pressed="false">A4</button>
+  </div></div>
+  <noscript><p class="intro">A4 versions: <a href="protractwar-rules-a4.pdf">rules</a>, <a href="protractwar-maps-a4.pdf">maps</a>,
+  <a href="protractwar-rules-dyslexic-a4.pdf">dyslexia-friendly rules</a>, <a href="protractwar-maps-dyslexic-a4.pdf">dyslexia-friendly maps</a>.</p></noscript>
   <div class="dl">
     <article>
       <h3>\U0001F4D6 The rules</h3>
       <p>All the instructions on this page, with pictures, on two pages.</p>
       <ul><li>Page 1: what you need and getting ready</li><li>Page 2: how to play</li></ul>
-      <a class="btn primary" href="{RULES_PDF}" download>{DL_ICON} Download rules</a>
+      <a class="btn primary" href="{RULES_PDF}" data-pdf="rules" data-dys="0" download>{DL_ICON} Download rules</a>
+      <p class="dys">\U0001F524 <a href="protractwar-rules-dyslexic.pdf" data-pdf="rules" data-dys="1" download>Dyslexia-friendly rules</a>
+        <small>Set in the OpenDyslexic font, on three pages.</small></p>
     </article>
     <article>
       <h3>\U0001F5FA️ The maps</h3>
       <p>A ready-to-play sheet with bases already drawn. Print it double-sided.</p>
       <ul><li>Side 1: a map full of blobs</li><li>Side 2: an open map to add your own</li></ul>
       <p class="tip">Print at 100% (“Actual size”) so each grid square is exactly 5 mm.</p>
-      <a class="btn secondary" href="{MAPS_PDF}" download>{DL_ICON} Download maps</a>
+      <a class="btn secondary" href="{MAPS_PDF}" data-pdf="maps" data-dys="0" download>{DL_ICON} Download maps</a>
+      <p class="dys">\U0001F524 <a href="protractwar-maps-dyslexic.pdf" data-pdf="maps" data-dys="1" download>Dyslexia-friendly maps</a>
+        <small>The map labels in the OpenDyslexic font.</small></p>
     </article>
   </div>
 </div></section>
@@ -275,13 +326,16 @@ def build():
 <footer><div class="wrap">
   Created by <b>Alexander &amp; Paul Reinheimer</b> · <a href="https://protractwar.com">protractwar.com</a>
 </div></footer>
+{PAPER_JS}
 </body>
 </html>"""
     os.makedirs(DOCROOT, exist_ok=True)
     with open(os.path.join(DOCROOT, "index.html"), "w") as f:
         f.write(html)
-    shutil.copy(os.path.join(SRC, "Protractwar.pdf"), os.path.join(DOCROOT, RULES_PDF))
-    shutil.copy(os.path.join(SRC, "Protractwar_Maps.pdf"), os.path.join(DOCROOT, MAPS_PDF))
+    for kind in ("rules", "maps"):
+        for paper, dyslexic in VARIANTS:
+            name = variant_name(kind, paper, dyslexic) + ".pdf"
+            shutil.copy(os.path.join(SRC, name), os.path.join(DOCROOT, name))
 
 
 if __name__ == "__main__":

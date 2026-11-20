@@ -1,9 +1,36 @@
-"""Builds src/protractwar.html (rules + vector illustrations). Print to PDF with headless Chrome."""
+"""Builds the rules HTML (rules + vector illustrations) in src/, one file per paper size and font variant.
+Print them to PDF with bin/build_pdfs.py."""
+import base64
 import math
 import os
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, "src")
+
+# paper key -> (CSS @page size, page width, page height)
+PAPERS = {"letter": ("letter", "8.5in", "11in"), "a4": ("A4", "210mm", "297mm")}
+VARIANTS = [(paper, dyslexic) for dyslexic in (False, True) for paper in PAPERS]
+FONT_DIR = os.path.join(SRC, "fonts", "opendyslexic")
+
+
+def variant_name(kind, paper, dyslexic):
+    """e.g. protractwar-rules, protractwar-rules-a4, protractwar-maps-dyslexic-a4 (no extension)."""
+    return f"protractwar-{kind}" + ("-dyslexic" if dyslexic else "") + ("-a4" if paper == "a4" else "")
+
+
+def dyslexic_css():
+    """Embeds OpenDyslexic (base64, so headless Chrome never prints before it loads) and applies it everywhere,
+    including the text inside the SVG figures."""
+    faces = []
+    for weight in (400, 700):
+        for style in ("normal", "italic"):
+            with open(os.path.join(FONT_DIR, f"opendyslexic-latin-{weight}-{style}.woff2"), "rb") as f:
+                data = base64.b64encode(f.read()).decode()
+            faces.append(f"@font-face {{ font-family: 'OpenDyslexic'; font-weight: {weight}; font-style: {style}; "
+                         f"src: url(data:font/woff2;base64,{data}) format('woff2'); }}")
+    # The labels inside the figures stay in the original font: they're sized to fit their drawings and
+    # OpenDyslexic's wider letters would run off the edges.
+    return "\n".join(faces) + "\nbody, h1, h2, h3, .num { font-family: 'OpenDyslexic', sans-serif; }\n"
 
 BLUE, BLUE_L = "#1f5fbf", "#dbe7fa"
 RED, RED_L = "#c8322b", "#fbdedb"
@@ -452,11 +479,20 @@ figcaption { font-size: 9.5pt; font-weight: 700; color: #4a5260; text-align: cen
 """
 
 
+# OpenDyslexic is much wider than Avenir, so the dyslexic rules use three pages (How to Play is split over
+# pages 2 and 3) rather than shrinking the text. Step 1's picture goes under its text instead of beside it.
+DYSLEXIC_RULES_CSS = """
+.card:first-child.side { flex-direction: column; align-items: stretch; }
+.card:first-child.side .cfigs { padding-top: 4px; }
+.card:first-child.side figure { width: 60% !important; }
+"""
+
+
 CREDITS = ('<div class="credits"><b>Credits</b><br>Created by Alexander &amp; Paul Reinheimer<br>'
            'Website: protractwar.com</div>')
 
 
-def build():
+def build(paper_size="letter", dyslexic=False):
     s = []
     s.append('<h1>Protract<span>war</span> \U0001F3AF</h1><div class="sub">A game for 2 players</div>')
     s.append('''<div class="top"><div class="box"><h2>What You Need</h2><ul>
@@ -499,12 +535,20 @@ def build():
                   "passed closest to the dot in the middle of the base.</li></ul>",
                   [(fig_hit(), "A hit!"), (fig_tie(), "Breaking a tie")]))
     c.append(card(6, "Say \u201cgood game\u201d", "<p>Shake hands! \U0001F642</p>", [(fig_gg(), "")], "100%", True))
-    s.append('<div class="grid"><div>' + "".join(c[:3]) + '</div><div>' + "".join(c[3:]) + CREDITS + "</div></div>")
+    if dyslexic:
+        s.append('<div class="grid"><div>' + "".join(c[:2]) + '</div><div>' + c[2] + '</div></div>'
+                 '<div class="grid pb"><div>' + "".join(c[3:5]) + '</div><div>' + c[5] + CREDITS + "</div></div>")
+    else:
+        s.append('<div class="grid"><div>' + "".join(c[:3]) + '</div><div>' + "".join(c[3:]) + CREDITS + "</div></div>")
 
-    html = f'<!doctype html><html><head><meta charset="utf-8"><title>Protractwar Rules</title><style>{CSS}</style></head><body>{"".join(s)}</body></html>'
-    with open(os.path.join(SRC, "protractwar.html"), "w") as f:
+    css = CSS.replace("size: letter;", f"size: {PAPERS[paper_size][0]};")
+    if dyslexic:
+        css += dyslexic_css() + DYSLEXIC_RULES_CSS
+    html = f'<!doctype html><html><head><meta charset="utf-8"><title>Protractwar Rules</title><style>{css}</style></head><body>{"".join(s)}</body></html>'
+    with open(os.path.join(SRC, variant_name("rules", paper_size, dyslexic) + ".html"), "w") as f:
         f.write(html)
 
 
 if __name__ == "__main__":
-    build()
+    for paper_size, dyslexic in VARIANTS:
+        build(paper_size, dyslexic)
