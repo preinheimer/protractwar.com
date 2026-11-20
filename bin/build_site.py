@@ -213,6 +213,8 @@ figcaption { text-align: center; font-weight: 800; font-size: 14px; color: var(-
 .tip { font-size: 15px; background: var(--blue-l); border-radius: 10px; padding: 10px 14px; color: var(--ink); }
 footer { padding: 34px 0 44px; text-align: center; color: var(--muted); font-size: 16px; }
 footer b { color: var(--ink); }
+.hits { margin: 14px 0 0; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 15px; }
+.hits img { display: block; height: 32px; width: auto; }
 @media (max-width: 860px) {
   .hero .wrap { grid-template-columns: 1fr; gap: 32px; }
   .hero { padding-top: 34px; }
@@ -339,6 +341,7 @@ def build():
 
 <footer><div class="wrap">
   Created by <b>Alexander &amp; Paul Reinheimer</b> · <a href="https://protractwar.com">protractwar.com</a>
+  <p class="hits">You are visitor <img src="counter.php" alt="(visitor counter)" height="32"></p>
 </div></footer>
 {PAPER_JS}
 </body>

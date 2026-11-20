@@ -31,6 +31,22 @@ locale and remembers the visitor's choice.
 and carries `noindex`. `bin/build_play.py` embeds the printed map's blob geometry so its "Printed map" matches the
 PDF; the page can also generate random maps.
 
+## Hit counter
+
+The footer shows a classic odometer hit counter: `<img src="counter.php">`, no JavaScript. `docroot/counter.php`
+appends one byte to `/var/lib/protractwar/hits` per hit, and the file's size is the count. Appends are atomic, so no
+locking is needed. It needs mod_php (`apt install libapache2-mod-php`); the vhost only lets PHP run for
+`counter.php`, and refuses it outright if PHP isn't loaded. One-time setup:
+
+```sh
+sudo install -d -o www-data -g www-data -m 750 /var/lib/protractwar
+sudo install -o www-data -g www-data -m 640 /dev/null /var/lib/protractwar/hits
+# optional: start from a number instead of 0
+sudo -u www-data sh -c 'head -c 12345 /dev/zero > /var/lib/protractwar/hits'
+```
+
+If the file can't be written the counter shows dashes and logs to Apache's error log.
+
 ## Deploying
 
 Copy the project to `/var/www/protractwar.com`, then:
