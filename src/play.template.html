@@ -1,0 +1,731 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Play Protractwar</title>
+<meta name="description" content="Play Protractwar online: a two-player angle-guessing game. Guess an angle, measure it with the protractor, and launch your missile at the other player's base.">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root { --ink:#1d232b; --muted:#56606c; --blue:#1f5fbf; --blue-l:#dbe7fa; --red:#c8322b; --red-l:#fbdedb;
+  --paper:#fbfcfe; --grid:#e3e8ef; --card:#ffffff; --line:#d6dbe1; --sun:#ffd23f; color-scheme: light;
+  --board-ratio: 0.7744; /* viewBox width / height */ }
+* { box-sizing: border-box; }
+body { margin: 0; color: var(--ink); font-family: 'Nunito', 'Avenir Next', Helvetica, sans-serif; font-size: 17px;
+  line-height: 1.5; background-color: var(--paper);
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 24px 24px; }
+h1, h2, h3 { font-family: 'Baloo 2', 'Arial Rounded MT Bold', sans-serif; line-height: 1.1; margin: 0; }
+a { color: var(--blue); }
+header.top { position: sticky; top: 0; z-index: 5; background: rgba(251,252,254,.92); backdrop-filter: blur(6px);
+  border-bottom: 2px solid var(--ink); }
+header.top .wrap { max-width: 1200px; margin: 0 auto; padding: 0 20px; display: flex; align-items: center;
+  justify-content: space-between; height: 56px; gap: 16px; }
+.logo { font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 25px; text-decoration: none; color: var(--ink); }
+.logo span { color: var(--red); }
+header nav { display: flex; align-items: center; gap: 16px; }
+header nav a { font-weight: 700; text-decoration: none; color: var(--ink); white-space: nowrap; }
+header nav a:hover { color: var(--blue); }
+
+main.game { max-width: 1200px; margin: 0 auto; padding: 20px; display: grid; grid-template-columns: auto minmax(300px, 380px);
+  gap: 24px; justify-content: center; align-items: start; }
+.board { width: calc((100vh - 110px) * var(--board-ratio)); width: calc((100dvh - 110px) * var(--board-ratio));
+  min-width: 320px; max-width: calc(100vw - 364px);
+  background: var(--card); border: 2.5px solid var(--ink); border-radius: 14px; box-shadow: 6px 6px 0 var(--ink); overflow: hidden; }
+.board svg { display: block; width: 100%; height: auto; user-select: none; -webkit-user-select: none; }
+.board svg.aiming { touch-action: none; cursor: crosshair; }
+.board text { font-family: 'Nunito', Helvetica, sans-serif; }
+#handle { cursor: grab; outline: none; }
+#handle:focus-visible .ring { stroke: var(--sun); stroke-width: 0.16; }
+.dragging, .dragging #handle { cursor: grabbing; }
+
+.panel { background: var(--card); border: 2.5px solid var(--ink); border-radius: 16px; box-shadow: 6px 6px 0 var(--ink);
+  padding: 20px 22px; display: flex; flex-direction: column; gap: 14px; position: sticky; top: 76px; }
+.panel h2 { font-size: 30px; }
+.panel p { margin: 0; }
+.muted { color: var(--muted); }
+.small { font-size: 15px; }
+.chip { display: inline-flex; align-items: center; gap: 8px; align-self: flex-start; padding: 4px 14px 2px; border-radius: 999px;
+  font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 22px; color: #fff; }
+.chip.blue { background: var(--blue); } .chip.red { background: var(--red); }
+.chip small { font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 14px; opacity: .85; }
+.note { border-radius: 10px; padding: 10px 14px; font-size: 15px; background: var(--blue-l); }
+.note.warn { background: #fff4c2; }
+.note.hit { background: var(--sun); font-weight: 800; }
+.angle-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.angle-in { display: inline-flex; align-items: center; gap: 4px; font-family: 'Baloo 2', sans-serif; font-size: 30px; font-weight: 800; }
+.angle-in input { width: 112px; font: inherit; padding: 2px 10px 0; border: 2.5px solid var(--ink); border-radius: 12px;
+  background: #fff; color: var(--ink); text-align: center; }
+.angle-in input:focus-visible { outline: 3px solid var(--sun); outline-offset: 1px; }
+.seg { display: inline-flex; border: 2.5px solid var(--ink); border-radius: 12px; overflow: hidden; }
+.seg button { font: inherit; font-weight: 800; padding: 8px 16px; border: 0; background: var(--card); color: var(--ink); cursor: pointer; }
+.seg button + button { border-left: 2.5px solid var(--ink); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: #fff; }
+.seg button:focus-visible { outline: 3px solid var(--sun); outline-offset: -5px; }
+.btns { display: flex; flex-wrap: wrap; gap: 12px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 11px 20px; border-radius: 12px;
+  font: inherit; font-weight: 800; font-size: 18px; border: 2.5px solid var(--ink); box-shadow: 4px 4px 0 var(--ink);
+  background: #fff; color: var(--ink); cursor: pointer; text-decoration: none; transition: transform .1s, box-shadow .1s; }
+.btn:hover { transform: translate(-1px,-1px); box-shadow: 5px 5px 0 var(--ink); }
+.btn:active { transform: translate(2px,2px); box-shadow: 2px 2px 0 var(--ink); }
+.btn:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
+.btn.blue { background: var(--blue); color: #fff; } .btn.red { background: var(--red); color: #fff; }
+.btn.ghost { box-shadow: none; padding: 7px 14px; font-size: 16px; }
+.btn.ghost:hover { transform: none; background: var(--paper); }
+.err { color: var(--red); font-weight: 700; font-size: 15px; min-height: 1em; }
+.len { font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 24px; }
+.label { font-weight: 800; margin-bottom: 6px; }
+.win { font-size: 34px; }
+.win.blue { color: var(--blue); } .win.red { color: var(--red); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+@media (max-width: 820px) {
+  main.game { grid-template-columns: 1fr; gap: 18px; padding: 16px; }
+  .board { justify-self: center; min-width: 0; max-width: 100%;
+    width: min(100%, calc(58vh * var(--board-ratio))); width: min(100%, calc(58dvh * var(--board-ratio))); }
+  .panel { position: static; padding: 16px; }
+  .panel h2 { font-size: 26px; }
+}
+@media (max-width: 520px) {
+  header.top .wrap { padding: 0 16px; }
+  .logo { font-size: 22px; }
+  .hide-s { display: none; }
+}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="logo" href="/">Protract<span>war</span></a>
+  <nav><a class="hide-s" href="/#play">How to play</a><button class="btn ghost" type="button" id="newgame">New game</button></nav>
+</div></header>
+
+<main class="game">
+  <div class="board">
+    <svg id="board" viewBox="-0.8 -0.8 20.6 26.6" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Game map">
+      <defs>
+        <pattern id="grid" width="0.5" height="0.5" patternUnits="userSpaceOnUse">
+          <path d="M 0.5 0 L 0 0 0 0.5" fill="none" stroke="#d3dae2" stroke-width="0.02"/>
+        </pattern>
+        <clipPath id="mapclip"><rect x="0" y="0" width="19" height="25"/></clipPath>
+      </defs>
+      <rect x="0" y="0" width="19" height="25" fill="#fff"/>
+      <rect x="0" y="0" width="19" height="25" fill="url(#grid)"/>
+      <g id="obstacles" clip-path="url(#mapclip)"></g>
+      <g id="bases"></g>
+      <g id="paths"></g>
+      <rect x="0" y="0" width="19" height="25" fill="none" stroke="#8a94a0" stroke-width="0.05"/>
+      <g id="guide"></g>
+      <g id="prot"></g>
+      <g id="fx"></g>
+      <g id="handle" tabindex="-1" role="slider" aria-label="Line length in centimetres" style="display:none">
+        <circle class="hit" r="0.95" fill="transparent"/>
+        <circle class="ring" r="0.36" fill="#fff" stroke="#1d232b" stroke-width="0.09"/>
+        <circle class="dot" r="0.16"/>
+      </g>
+    </svg>
+  </div>
+  <aside class="panel" id="panel" aria-live="polite"></aside>
+</main>
+
+<script>
+(function () {
+"use strict";
+
+// ---------- constants ----------
+var PRINTED = __PRINTED_MAP__;      // filled in by bin/build_play.py from the printed map
+var W = PRINTED.w, H = PRINTED.h;   // map size in cm (map units)
+var BASE = 1;                       // bases are 1 cm squares
+var PR = 2.4;                       // protractor radius (cm)
+var MIN_LEN = 0.15;                 // shortest line you can draw, unless a blob is closer than this
+var STOP_EPS = 1e-4;                // a missile stopped by a blob rests this far outside it
+var INK = "#1d232b", BLOB_F = "#e4e8ed", BLOB_S = "#4a5260";
+var PLAYERS = {
+  blue: { name: "Blue", color: "#1f5fbf", light: "#dbe7fa", base: PRINTED.blue, heading0: 0,
+          firstHint: "First turn: 0° points right, along the bottom edge of the paper." },
+  red:  { name: "Red", color: "#c8322b", light: "#fbdedb", base: PRINTED.red, heading0: 180,
+          firstHint: "First turn: 0° points left, along the top edge of the paper." }
+};
+var OTHER = { blue: "red", red: "blue" };
+var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+var finePointer = window.matchMedia && window.matchMedia("(pointer: fine)").matches;
+
+// ---------- geometry ----------
+// Angles are in degrees, counter-clockwise on screen, 0 = pointing right. SVG y grows downward.
+function rad(d) { return d * Math.PI / 180; }
+function dirOf(h) { return { x: Math.cos(rad(h)), y: -Math.sin(rad(h)) }; }
+function at(o, h, r) { return { x: o.x + r * Math.cos(rad(h)), y: o.y - r * Math.sin(rad(h)) }; }
+function cross(a, b) { return a.x * b.y - a.y * b.x; }
+function norm360(a) { a %= 360; return a < 0 ? a + 360 : a; }
+function f(n) { return Math.round(n * 1000) / 1000; }
+function baseCentre(p) { return { x: p.base[0] + BASE / 2, y: p.base[1] + BASE / 2 }; }
+
+// Same radius function as the printed map (bin/build_protractwar.py: blob_r).
+function blobPoly(cx, cy, R, seed) {
+  var n = 160, pts = [];
+  for (var i = 0; i < n; i++) {
+    var t = 2 * Math.PI * i / n;
+    var r = R * (1 + 0.16 * Math.sin(3 * t + seed) + 0.09 * Math.sin(5 * t + 2 * seed) + 0.06 * Math.cos(2 * t + seed * 0.7));
+    pts.push({ x: cx + r * Math.cos(t), y: cy + r * Math.sin(t) });
+  }
+  return pts;
+}
+
+function pointInPoly(p, poly) {
+  var inside = false;
+  for (var i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    var a = poly[i], b = poly[j];
+    if ((a.y > p.y) !== (b.y > p.y) && p.x < (b.x - a.x) * (p.y - a.y) / (b.y - a.y) + a.x) inside = !inside;
+  }
+  return inside;
+}
+
+function bbox(poly) {
+  var b = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
+  poly.forEach(function (p) { b.x0 = Math.min(b.x0, p.x); b.y0 = Math.min(b.y0, p.y); b.x1 = Math.max(b.x1, p.x); b.y1 = Math.max(b.y1, p.y); });
+  return b;
+}
+
+// How far can a missile at p fly in unit direction d? Stops at the first blob it touches, and never leaves the
+// map: the map edge caps the distance, so a line can't go off the paper and around a blob.
+function castRay(p, d) {
+  var tEdge = Infinity;
+  if (d.x > 1e-12) tEdge = Math.min(tEdge, (W - p.x) / d.x);
+  if (d.x < -1e-12) tEdge = Math.min(tEdge, -p.x / d.x);
+  if (d.y > 1e-12) tEdge = Math.min(tEdge, (H - p.y) / d.y);
+  if (d.y < -1e-12) tEdge = Math.min(tEdge, -p.y / d.y);
+  tEdge = Math.max(0, tEdge);
+  var tBlob = Infinity;
+  for (var k = 0; k < state.obstacles.length; k++) {
+    var poly = state.obstacles[k].pts;
+    if (pointInPoly(p, poly)) return { t: 0, by: "blob" };
+    for (var i = 0; i < poly.length; i++) {
+      var a = poly[i], b = poly[(i + 1) % poly.length];
+      var e = { x: b.x - a.x, y: b.y - a.y }, den = cross(d, e);
+      if (Math.abs(den) < 1e-12) continue;
+      var w = { x: a.x - p.x, y: a.y - p.y };
+      var t = cross(w, e) / den, u = cross(w, d) / den;
+      if (t > 1e-9 && u >= -1e-9 && u <= 1 + 1e-9 && t < tBlob) tBlob = t;
+    }
+  }
+  if (tBlob <= tEdge) return { t: Math.max(0, tBlob - STOP_EPS), by: "blob" };
+  return { t: tEdge, by: "edge" };
+}
+
+// Where does segment a->b first enter the rectangle? Returns the parameter (0..1) or null (Liang-Barsky).
+function segRect(a, b, x0, y0, x1, y1) {
+  var t0 = 0, t1 = 1, dx = b.x - a.x, dy = b.y - a.y;
+  var P = [-dx, dx, -dy, dy], Q = [a.x - x0, x1 - a.x, a.y - y0, y1 - a.y];
+  for (var i = 0; i < 4; i++) {
+    if (P[i] === 0) { if (Q[i] < 0) return null; continue; }
+    var r = Q[i] / P[i];
+    if (P[i] < 0) { if (r > t1) return null; if (r > t0) t0 = r; }
+    else { if (r < t0) return null; if (r < t1) t1 = r; }
+  }
+  return t0;
+}
+
+function closestOnSeg(c, a, b) {
+  var dx = b.x - a.x, dy = b.y - a.y, L2 = dx * dx + dy * dy;
+  var t = L2 ? Math.max(0, Math.min(1, ((c.x - a.x) * dx + (c.y - a.y) * dy) / L2)) : 0;
+  return { x: a.x + t * dx, y: a.y + t * dy };
+}
+function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+
+// ---------- maps ----------
+function printedObstacles() {
+  var obs = PRINTED.blobs.map(function (b) { return { pts: blobPoly(b[0], b[1], b[2], b[3]) }; });
+  PRINTED.polys.forEach(function (poly) { obs.push({ pts: poly.map(function (q) { return { x: q[0], y: q[1] }; }) }); });
+  return obs;
+}
+
+// Random layout in the style of the printed map: a big blob near the middle, some blobs touching the edges,
+// and nothing within reach of either base's first move.
+function randomObstacles() {
+  var bases = [baseCentre(PLAYERS.blue), baseCentre(PLAYERS.red)];
+  var placed = [], rnd = Math.random;
+  function tryPlace(x, y, R) {
+    if (bases.some(function (b) { return Math.hypot(x - b.x, y - b.y) < 3.2 + R; })) return false;
+    if (placed.some(function (q) { return Math.hypot(x - q.x, y - q.y) < 1.3 * (R + q.R) + 0.5; })) return false;
+    placed.push({ x: x, y: y, R: R, seed: rnd() * 6.28 });
+    return true;
+  }
+  var tries = 0;
+  while (!tryPlace(W / 2 + (rnd() - 0.5) * 4, H / 2 + (rnd() - 0.5) * 5, 0.95 + rnd() * 0.2) && tries++ < 200) {}
+  var edged = 0; tries = 0;
+  while (edged < 5 && tries++ < 2000) {            // centred on an edge, so they touch it
+    var side = Math.floor(rnd() * 4), R = 0.7 + rnd() * 0.4, s = rnd();
+    var x = side === 0 ? 0 : side === 1 ? W : s * W, y = side === 2 ? 0 : side === 3 ? H : s * H;
+    if (side < 2) y = s * H;
+    if (tryPlace(x, y, R)) edged++;
+  }
+  var big = 0; tries = 0;
+  while (big < 6 && tries++ < 2000) if (tryPlace(rnd() * W, rnd() * H, 0.65 + rnd() * 0.45)) big++;
+  var small = 0; tries = 0;
+  while (small < 14 && tries++ < 4000) if (tryPlace(rnd() * W, rnd() * H, 0.4 + rnd() * 0.45)) small++;
+  return placed.map(function (b) { return { pts: blobPoly(b.x, b.y, b.R, b.seed) }; });
+}
+
+// ---------- state ----------
+var state = {
+  phase: "setup",            // setup | guess | measure | launch | over
+  mapKind: "printed",
+  randomMap: null,
+  obstacles: printedObstacles(),
+  first: "blue", turn: "blue", round: 1,
+  players: {},
+  pendingHit: null,          // first player's hit, waiting to see if the second player ties it
+  note: null,                // { text, kind } shown at the top of the next turn
+  angle: "", side: "left",
+  aim: null,                 // { dir, heading, max, by }
+  len: 0,
+  result: null,
+  anim: 0
+};
+
+function resetPlayers() {
+  ["blue", "red"].forEach(function (k) {
+    state.players[k] = { pos: baseCentre(PLAYERS[k]), heading: PLAYERS[k].heading0, segs: [], turns: 0, hit: null };
+  });
+}
+resetPlayers();
+
+// ---------- rendering: board ----------
+var svg = document.getElementById("board");
+var $ = function (id) { return document.getElementById(id); };
+function el(tag, attrs, text) {
+  var n = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for (var k in attrs) n.setAttribute(k, attrs[k]);
+  if (text != null) n.textContent = text;
+  return n;
+}
+function clear(g) { while (g.firstChild) g.removeChild(g.firstChild); }
+function polyPath(pts) { return "M" + pts.map(function (p) { return f(p.x) + " " + f(p.y); }).join("L") + "Z"; }
+
+function drawMap() {
+  var g = $("obstacles"); clear(g);
+  state.obstacles.forEach(function (o) {
+    g.appendChild(el("path", { d: polyPath(o.pts), fill: BLOB_F, stroke: BLOB_S, "stroke-width": 0.05, "stroke-linejoin": "round" }));
+  });
+  var b = $("bases"); clear(b);
+  ["blue", "red"].forEach(function (k) {
+    var P = PLAYERS[k], c = baseCentre(P);
+    b.appendChild(el("rect", { x: P.base[0], y: P.base[1], width: BASE, height: BASE, fill: P.light, stroke: P.color, "stroke-width": 0.06 }));
+    b.appendChild(el("circle", { cx: c.x, cy: c.y, r: 0.09, fill: P.color }));
+  });
+}
+
+function drawPaths() {
+  var g = $("paths"); clear(g);
+  ["blue", "red"].forEach(function (k) {
+    var pl = state.players[k], col = PLAYERS[k].color;
+    pl.segs.forEach(function (s) {
+      g.appendChild(el("line", { x1: f(s.a.x), y1: f(s.a.y), x2: f(s.b.x), y2: f(s.b.y), stroke: col, "stroke-width": 0.09, "stroke-linecap": "round" }));
+    });
+    pl.segs.forEach(function (s, i) {
+      if (s.stopped) g.appendChild(burst(s.b, 0.32, 0.16, "#ffd23f", col));
+      g.appendChild(el("circle", { cx: f(s.b.x), cy: f(s.b.y), r: 0.15, fill: col }));
+    });
+    if (pl.hit) g.appendChild(burstHit(pl.hit.at, col));
+  });
+  var active = state.phase === "guess" || state.phase === "measure" || state.phase === "launch";
+  if (active) {
+    var p = state.players[state.turn].pos;
+    g.appendChild(el("circle", { cx: f(p.x), cy: f(p.y), r: 0.42, fill: "none", stroke: PLAYERS[state.turn].color, "stroke-width": 0.07, "stroke-dasharray": "0.18 0.12" }));
+  }
+}
+
+function burst(c, r1, r2, fill, stroke) {
+  var pts = [];
+  for (var i = 0; i < 16; i++) { var r = i % 2 ? r2 : r1, t = Math.PI * i / 8; pts.push(f(c.x + r * Math.cos(t)) + "," + f(c.y + r * Math.sin(t))); }
+  return el("polygon", { points: pts.join(" "), fill: fill, stroke: stroke, "stroke-width": 0.05, "stroke-linejoin": "round" });
+}
+function burstHit(c, col) {
+  var g = el("g", {});
+  g.appendChild(burst(c, 0.85, 0.42, "#ffd23f", col));
+  g.appendChild(el("text", { x: f(c.x), y: f(c.y + 0.13), "font-size": 0.36, "font-weight": 800, "text-anchor": "middle", fill: col }, "HIT!"));
+  return g;
+}
+
+// The protractor, drawn in map coordinates: origin o, flat edge along `rot`, opening to the left (s = 1) or
+// right (s = -1). `needle` sweeps from 0 to the chosen angle; `mark` adds the small mark and label.
+function drawProtractor(o, rot, s, needle, opacity, mark, heading) {
+  var g = $("prot"); clear(g);
+  g.setAttribute("opacity", opacity);
+  var col = PLAYERS[state.turn].color;
+  // dashed "0° = straight ahead" guide along the heading
+  var ahead = at(o, heading, PR + 1.1);
+  g.appendChild(el("line", { x1: f(o.x), y1: f(o.y), x2: f(ahead.x), y2: f(ahead.y), stroke: INK, "stroke-width": 0.04, "stroke-dasharray": "0.15 0.12", opacity: 0.7 }));
+  var a0 = at(o, rot, PR), a1 = at(o, rot + 180, PR);
+  g.appendChild(el("path", { d: "M" + f(a0.x) + " " + f(a0.y) + " A " + PR + " " + PR + " 0 0 " + (s > 0 ? 0 : 1) + " " + f(a1.x) + " " + f(a1.y) + " Z",
+    fill: "#fff4b8", "fill-opacity": 0.85, stroke: INK, "stroke-width": 0.05, "stroke-linejoin": "round" }));
+  var i0 = at(o, rot, PR * 0.42), i1 = at(o, rot + 180, PR * 0.42);
+  g.appendChild(el("path", { d: "M" + f(i0.x) + " " + f(i0.y) + " A " + f(PR * 0.42) + " " + f(PR * 0.42) + " 0 0 " + (s > 0 ? 0 : 1) + " " + f(i1.x) + " " + f(i1.y),
+    fill: "none", stroke: INK, "stroke-width": 0.025, opacity: 0.6 }));
+  for (var a = 0; a <= 180; a += 5) {
+    var len = a % 30 === 0 ? 0.36 : a % 10 === 0 ? 0.24 : 0.13;
+    var p = at(o, rot + s * a, PR), q = at(o, rot + s * a, PR - len);
+    g.appendChild(el("line", { x1: f(p.x), y1: f(p.y), x2: f(q.x), y2: f(q.y), stroke: INK, "stroke-width": a % 10 ? 0.02 : 0.03 }));
+    if (a % 30 === 0) {
+      var tp = at(o, rot + s * a, PR - 0.62);
+      g.appendChild(el("text", { x: f(tp.x), y: f(tp.y + 0.11), "font-size": 0.3, "text-anchor": "middle", fill: INK }, String(a)));
+    }
+  }
+  g.appendChild(el("line", { x1: f(o.x - 0.2), y1: f(o.y), x2: f(o.x + 0.2), y2: f(o.y), stroke: INK, "stroke-width": 0.03, transform: "rotate(" + f(-rot) + " " + f(o.x) + " " + f(o.y) + ")" }));
+  if (needle != null) {
+    var n = at(o, rot + s * needle, PR + 0.3);
+    g.appendChild(el("line", { x1: f(o.x), y1: f(o.y), x2: f(n.x), y2: f(n.y), stroke: col, "stroke-width": 0.06, "stroke-linecap": "round" }));
+  }
+  if (mark) {
+    var m0 = at(o, rot + s * needle, PR + 0.12), m1 = at(o, rot + s * needle, PR + 0.55);
+    g.appendChild(el("line", { x1: f(m0.x), y1: f(m0.y), x2: f(m1.x), y2: f(m1.y), stroke: col, "stroke-width": 0.1, "stroke-linecap": "round" }));
+    var lp = at(o, rot + s * (needle <= 160 ? needle + 9 : needle - 9), PR + 0.8);   // beside the line, not on it
+    g.appendChild(el("text", { x: f(lp.x), y: f(lp.y + 0.15), "font-size": 0.46, "font-weight": 800, "text-anchor": "middle", fill: col,
+      stroke: "#fff", "stroke-width": 0.12, "paint-order": "stroke" }, fmtAngle(needle) + "°"));
+  }
+}
+
+function drawAim() {
+  var g = $("guide"); clear(g);
+  var h = $("handle");
+  if (state.phase !== "launch") { h.style.display = "none"; h.setAttribute("tabindex", "-1"); svg.classList.remove("aiming"); return; }
+  var p = state.players[state.turn].pos, A = state.aim, col = PLAYERS[state.turn].color;
+  var far = { x: p.x + A.dir.x * A.max, y: p.y + A.dir.y * A.max };
+  var end = { x: p.x + A.dir.x * state.len, y: p.y + A.dir.y * state.len };
+  // where the line would stop: a blob, or the edge of the paper
+  g.appendChild(el("line", { x1: f(p.x), y1: f(p.y), x2: f(far.x), y2: f(far.y), stroke: col, "stroke-width": 0.05, "stroke-dasharray": "0.2 0.15", opacity: 0.55 }));
+  if (A.max > 0.01) {
+    var nx = -A.dir.y, ny = A.dir.x;
+    g.appendChild(el("line", { x1: f(far.x + nx * 0.3), y1: f(far.y + ny * 0.3), x2: f(far.x - nx * 0.3), y2: f(far.y - ny * 0.3), stroke: INK, "stroke-width": 0.07, "stroke-linecap": "round" }));
+  }
+  g.appendChild(el("line", { x1: f(p.x), y1: f(p.y), x2: f(end.x), y2: f(end.y), stroke: col, "stroke-width": 0.09, "stroke-linecap": "round" }));
+  h.style.display = "";
+  h.setAttribute("tabindex", "0");
+  h.setAttribute("transform", "translate(" + f(end.x) + " " + f(end.y) + ")");
+  h.querySelector(".dot").setAttribute("fill", col);
+  h.setAttribute("aria-valuemin", fmtLen(Math.min(MIN_LEN, A.max)));
+  h.setAttribute("aria-valuemax", fmtLen(A.max));
+  h.setAttribute("aria-valuenow", fmtLen(state.len));
+  h.setAttribute("aria-valuetext", fmtLen(state.len) + " cm");
+  svg.classList.add("aiming");
+  var out = $("lenout"); if (out) out.textContent = fmtLen(state.len) + " cm";
+}
+
+function drawFx() {
+  var g = $("fx"); clear(g);
+  if (state.phase !== "over" || !state.result || !state.result.tie) return;
+  // tie-break: show how close each line passed to the dot in the middle of the base
+  ["blue", "red"].forEach(function (k) {
+    var hit = state.players[k].hit, c = baseCentre(PLAYERS[OTHER[k]]);
+    g.appendChild(el("line", { x1: f(c.x), y1: f(c.y), x2: f(hit.closest.x), y2: f(hit.closest.y), stroke: INK, "stroke-width": 0.05, "stroke-dasharray": "0.1 0.08" }));
+  });
+}
+
+function fmtLen(n) { return (Math.round(n * 10) / 10).toFixed(1); }
+function fmtAngle(n) { return String(Math.round(n * 10) / 10); }
+
+// ---------- rendering: panel ----------
+function chip() {
+  var k = state.turn;
+  return '<span class="chip ' + k + '">' + PLAYERS[k].name + "’s turn <small>Round " + state.round + "</small></span>";
+}
+function noteHtml() {
+  return state.note ? '<p class="note ' + (state.note.kind || "") + '">' + state.note.text + "</p>" : "";
+}
+
+function renderPanel() {
+  var p = $("panel"), k = state.turn, pl = state.players[k], P = PLAYERS[k];
+  if (state.phase === "setup") {
+    p.innerHTML =
+      '<h2>Play Protractwar</h2>' +
+      '<p class="muted small">Two players, one screen. Take turns guessing angles and launching missiles. ' +
+      'Hit the other player’s base first to win!</p>' +
+      '<div><div class="label">Map</div><div class="btns" style="align-items:center">' +
+      '<div class="seg" role="group" aria-label="Map"><button type="button" data-map="printed" aria-pressed="' + (state.mapKind === "printed") + '">Printed map</button>' +
+      '<button type="button" data-map="random" aria-pressed="' + (state.mapKind === "random") + '">Random map</button></div>' +
+      (state.mapKind === "random" ? '<button type="button" class="btn ghost" data-act="shuffle">🎲 Shuffle</button>' : "") +
+      "</div></div>" +
+      '<div><div class="label">Who said the word “angle” most recently?</div><p class="muted small" style="margin-bottom:10px">They go first.</p>' +
+      '<div class="btns"><button type="button" class="btn blue" data-start="blue">Blue goes first</button>' +
+      '<button type="button" class="btn red" data-start="red">Red goes first</button></div></div>';
+    return;
+  }
+  if (state.phase === "guess") {
+    var hint = pl.turns === 0 ? P.firstHint : "0° points straight ahead, along your last line.";
+    p.innerHTML = chip() + noteHtml() +
+      "<p><b>Say an angle out loud</b>, then type it in. No peeking with the protractor!</p>" +
+      '<p class="muted small">' + hint + "</p>" +
+      '<div class="angle-row"><label class="angle-in"><span class="sr">Angle in degrees</span>' +
+      '<input id="angle" type="number" inputmode="decimal" min="0" max="180" step="any" value="' + state.angle + '" placeholder="45">°</label>' +
+      '<div class="seg" role="group" aria-label="Turn direction"><button type="button" data-side="left" aria-pressed="' + (state.side === "left") + '">↺ Left</button>' +
+      '<button type="button" data-side="right" aria-pressed="' + (state.side === "right") + '">Right ↻</button></div></div>' +
+      '<p class="err" id="err"></p>' +
+      '<div class="btns"><button type="button" class="btn ' + k + '" data-act="measure">📐 Measure it</button></div>';
+    if (finePointer) { var inp = $("angle"); inp.focus(); inp.select(); }
+    return;
+  }
+  if (state.phase === "measure") {
+    p.innerHTML = chip() + "<p><b>Measuring…</b> " + fmtAngle(+state.angle) + "° to the " + state.side + ".</p>";
+    return;
+  }
+  if (state.phase === "launch") {
+    var A = state.aim, blocked = A.max < MIN_LEN;
+    if (blocked) {
+      p.innerHTML = chip() +
+        '<p class="note warn"><b>Blocked!</b> ' + (A.by === "blob" ? "A blob is right in the way" : "That points off the edge of the paper") +
+        ", so your missile can’t move this turn.</p>" +
+        '<div class="btns"><button type="button" class="btn ' + k + '" data-act="launch">End turn</button></div>';
+      return;
+    }
+    p.innerHTML = chip() +
+      "<p><b>Launch your missile.</b> Drag the dot along the line to choose how far it flies.</p>" +
+      '<p class="muted small">' + (A.by === "blob" ? "⚠️ A blob is in the way: your missile stops if it touches it." :
+        "The line stops at the edge of the paper.") + " Furthest: " + fmtLen(A.max) + " cm.</p>" +
+      '<p>Line length: <span class="len" id="lenout">' + fmtLen(state.len) + " cm</span></p>" +
+      '<div class="btns"><button type="button" class="btn ' + k + '" data-act="launch">🚀 Launch!</button></div>';
+    return;
+  }
+  if (state.phase === "over") {
+    var r = state.result, html = "";
+    if (r.winner) {
+      html += '<h2 class="win ' + r.winner + '">' + PLAYERS[r.winner].name + " wins! 🎉</h2>";
+    } else {
+      html += '<h2 class="win">It’s a draw!</h2>';
+    }
+    html += "<p>" + r.text + "</p>";
+    html += '<div class="btns"><button type="button" class="btn blue" data-act="again">Play again</button></div>';
+    html += '<p class="muted small">Don’t forget to say “good game” and shake hands! 🙂</p>';
+    p.innerHTML = html;
+  }
+}
+
+function render() { drawPaths(); drawAim(); drawFx(); renderPanel(); }
+
+// ---------- game flow ----------
+function startGame(first) {
+  state.anim++;
+  resetPlayers();
+  state.first = first; state.turn = first; state.round = 1;
+  state.pendingHit = null; state.result = null; state.note = null;
+  state.angle = ""; state.side = "left";
+  clear($("prot")); clear($("fx"));
+  state.phase = "guess";
+  render();
+}
+
+function toSetup() {
+  state.anim++;
+  state.phase = "setup";
+  resetPlayers();
+  clear($("prot")); clear($("fx"));
+  render();
+}
+
+function setMap(kind, reroll) {
+  state.mapKind = kind;
+  if (kind === "random" && (reroll || !state.randomMap)) state.randomMap = randomObstacles();
+  state.obstacles = kind === "random" ? state.randomMap : printedObstacles();
+  drawMap();
+  render();
+}
+
+// Next animation frame, with a timer as a fallback so an animation can never stall (some browsers pause or
+// throttle requestAnimationFrame, e.g. in background tabs or embedded views).
+function nextFrame(cb) {
+  var done = false, raf, timer;
+  function run() { if (done) return; done = true; cancelAnimationFrame(raf); clearTimeout(timer); cb(performance.now()); }
+  raf = requestAnimationFrame(run);
+  timer = setTimeout(run, 50);
+}
+function animate(ms, token, step) {
+  return new Promise(function (resolve) {
+    if (reduceMotion || ms <= 0) { step(1); resolve(true); return; }
+    var t0 = performance.now();
+    function frame(now) {
+      if (token !== state.anim) { resolve(false); return; }
+      var k = Math.min(1, (now - t0) / ms);
+      step(k);
+      if (k < 1) nextFrame(frame); else resolve(true);
+    }
+    nextFrame(frame);
+  });
+}
+function ease(k) { return 1 - Math.pow(1 - k, 3); }
+
+function measure() {
+  var v = String($("angle").value).trim(), a = Number(v);
+  if (v === "" || !isFinite(a) || a < 0 || a > 180) { $("err").textContent = "Pick an angle from 0 to 180 degrees."; $("angle").focus(); return; }
+  a = Math.round(a * 10) / 10;
+  state.angle = String(a);
+  var pl = state.players[state.turn], s = state.side === "left" ? 1 : -1, h = pl.heading, o = pl.pos;
+  state.phase = "measure";
+  render();
+  var token = ++state.anim;
+  // 1) the protractor comes down and lines up with the edge of the paper / the last line
+  animate(600, token, function (k) { drawProtractor(o, h - s * 40 * (1 - ease(k)), s, null, Math.min(1, k * 2), false, h); })
+    // 2) find the angle
+    .then(function (ok) { return ok && animate(350 + a * 5, token, function (k) { drawProtractor(o, h, s, a * ease(k), 1, false, h); }); })
+    .then(function (ok) {
+      if (!ok) return;
+      drawProtractor(o, h, s, a, 1, true, h);
+      var heading = norm360(h + s * a), dir = dirOf(heading), hit = castRay(o, dir);
+      state.aim = { dir: dir, heading: heading, max: hit.t, by: hit.by };
+      state.len = Math.min(hit.t, Math.max(Math.min(MIN_LEN, hit.t), PR));   // start at the mark
+      state.phase = "launch";
+      render();
+      if (finePointer) { var b = document.querySelector('[data-act="launch"]'); if (b) b.focus(); }
+    });
+}
+
+function launch() {
+  var k = state.turn, pl = state.players[k], A = state.aim, o = pl.pos;
+  var L = A.max < MIN_LEN ? 0 : Math.max(Math.min(MIN_LEN, A.max), Math.min(state.len, A.max));
+  var end = { x: Math.min(W, Math.max(0, o.x + A.dir.x * L)), y: Math.min(H, Math.max(0, o.y + A.dir.y * L)) };
+  var stopped = A.by === "blob" && L >= A.max - 1e-6;
+  state.note = null;
+  if (L > 1e-9) {
+    pl.segs.push({ a: o, b: end, stopped: stopped });
+    pl.pos = end;
+    pl.heading = A.heading;
+  }
+  pl.turns++;
+  clear($("prot"));
+  // did this line cross into the other player's base?
+  var ob = PLAYERS[OTHER[k]].base, hitT = L > 1e-9 ? segRect(o, end, ob[0], ob[1], ob[0] + BASE, ob[1] + BASE) : null;
+  if (hitT != null) {
+    var c = baseCentre(PLAYERS[OTHER[k]]), closest = closestOnSeg(c, o, end);
+    pl.hit = { at: { x: o.x + (end.x - o.x) * hitT, y: o.y + (end.y - o.y) * hitT }, closest: closest, d: dist(c, closest) };
+  }
+  var second = OTHER[state.first];
+  if (k === state.first) {
+    if (pl.hit) {
+      state.pendingHit = k;
+      state.note = { kind: "hit", text: "💥 " + PLAYERS[k].name + " hit " + PLAYERS[second].name + "’s base! " + PLAYERS[second].name +
+        " gets one last turn this round to hit back and tie it." };
+    } else if (stopped) {
+      state.note = { text: PLAYERS[k].name + "’s missile hit a blob and stopped." };
+    }
+    nextTurn(second);
+    return;
+  }
+  // second player's turn ends the round
+  var other = state.players[state.first];
+  if (state.pendingHit && pl.hit) {
+    var bd = state.players.blue.hit.d, rd = state.players.red.hit.d, diff = Math.abs(bd - rd);
+    var w = diff < 1e-6 ? null : bd < rd ? "blue" : "red";
+    finish(w, "Both players hit a base in the same round, so it comes down to whose line passed closest to the dot in the middle of the base. " +
+      "Blue: " + fmtLen(bd) + " cm away. Red: " + fmtLen(rd) + " cm away.", true);
+  } else if (state.pendingHit) {
+    finish(state.first, PLAYERS[state.first].name + "’s missile hit " + PLAYERS[second].name + "’s base, and " +
+      PLAYERS[second].name + " couldn’t hit back.", false);
+  } else if (pl.hit) {
+    finish(k, PLAYERS[k].name + "’s missile crossed into " + PLAYERS[state.first].name + "’s base!", false);
+  } else {
+    if (stopped) state.note = { text: PLAYERS[k].name + "’s missile hit a blob and stopped." };
+    state.round++;
+    nextTurn(state.first);
+  }
+}
+
+function nextTurn(k) {
+  state.turn = k;
+  state.angle = ""; state.side = "left";
+  state.phase = "guess";
+  render();
+}
+
+function finish(winner, text, tie) {
+  state.result = { winner: winner, text: text, tie: tie };
+  state.phase = "over";
+  render();
+}
+
+// ---------- input ----------
+$("panel").addEventListener("click", function (e) {
+  var b = e.target.closest("button");
+  if (!b) return;
+  if (b.dataset.map) setMap(b.dataset.map, false);
+  else if (b.dataset.start) startGame(b.dataset.start);
+  else if (b.dataset.side) {
+    state.side = b.dataset.side;
+    var inp = $("angle"); state.angle = inp ? inp.value : state.angle;
+    renderPanel();
+  }
+  else if (b.dataset.act === "shuffle") setMap("random", true);
+  else if (b.dataset.act === "measure") measure();
+  else if (b.dataset.act === "launch") launch();
+  else if (b.dataset.act === "again") toSetup();
+});
+$("panel").addEventListener("keydown", function (e) {
+  if (e.key === "Enter" && e.target.id === "angle") { e.preventDefault(); measure(); }
+});
+$("panel").addEventListener("input", function (e) {
+  if (e.target.id === "angle") { state.angle = e.target.value; $("err").textContent = ""; }
+});
+$("newgame").addEventListener("click", toSetup);
+
+// Drag along the line: the pointer's position is projected onto the line, and the length is clamped between the
+// shortest allowed line and the first blob / edge of the paper.
+function toMap(e) {
+  var pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
+  return pt.matrixTransform(svg.getScreenCTM().inverse());
+}
+function lenFromPoint(q) {
+  var o = state.players[state.turn].pos, A = state.aim;
+  var t = (q.x - o.x) * A.dir.x + (q.y - o.y) * A.dir.y;
+  return Math.max(Math.min(MIN_LEN, A.max), Math.min(A.max, t));
+}
+var dragging = null;
+svg.addEventListener("pointerdown", function (e) {
+  if (state.phase !== "launch" || state.aim.max < MIN_LEN) return;
+  var q = toMap(e), o = state.players[state.turn].pos, A = state.aim;
+  var t = (q.x - o.x) * A.dir.x + (q.y - o.y) * A.dir.y;
+  var off = Math.abs((q.x - o.x) * A.dir.y - (q.y - o.y) * A.dir.x);
+  var onHandle = e.target.closest && e.target.closest("#handle");
+  if (!onHandle && (off > 1.6 || t < -1 || t > A.max + 1.5)) return;
+  dragging = e.pointerId;
+  svg.setPointerCapture(e.pointerId);
+  svg.classList.add("dragging");
+  state.len = lenFromPoint(q);
+  drawAim();
+  e.preventDefault();
+});
+svg.addEventListener("pointermove", function (e) {
+  if (dragging !== e.pointerId) return;
+  state.len = lenFromPoint(toMap(e));
+  drawAim();
+});
+function endDrag(e) {
+  if (dragging !== e.pointerId) return;
+  dragging = null;
+  svg.classList.remove("dragging");
+}
+svg.addEventListener("pointerup", endDrag);
+svg.addEventListener("pointercancel", endDrag);
+
+$("handle").addEventListener("keydown", function (e) {
+  if (state.phase !== "launch") return;
+  var step = e.shiftKey ? 1 : 0.1, A = state.aim, lo = Math.min(MIN_LEN, A.max);
+  if (e.key === "ArrowRight" || e.key === "ArrowUp") state.len = Math.min(A.max, state.len + step);
+  else if (e.key === "ArrowLeft" || e.key === "ArrowDown") state.len = Math.max(lo, state.len - step);
+  else if (e.key === "Home") state.len = lo;
+  else if (e.key === "End") state.len = A.max;
+  else if (e.key === "Enter") { launch(); e.preventDefault(); return; }
+  else return;
+  e.preventDefault();
+  drawAim();
+});
+
+// ---------- go ----------
+drawMap();
+render();
+
+// For automated checks.
+window.__protractwar = { state: state, castRay: castRay, segRect: segRect, dirOf: dirOf, setMap: setMap, pointInPoly: pointInPoly,
+  startGame: startGame, measure: measure, launch: launch, W: W, H: H };
+})();
+</script>
+</body>
+</html>

@@ -18,12 +18,17 @@ python3 bin/build_protractwar.py   # -> src/protractwar-rules*.html
 python3 bin/build_maps.py          # -> src/protractwar-maps*.html
 python3 bin/build_pdfs.py          # -> src/*.pdf via headless Chrome (set CHROME=... if needed); checks page counts
 python3 bin/build_site.py          # -> docroot/index.html + docroot/*.pdf
+python3 bin/build_play.py          # -> docroot/play.html (from src/play.template.html)
 ```
 
 Each document is built in four variants: Letter, A4 (`-a4`), and dyslexia-friendly (`-dyslexic`, set in
 OpenDyslexic, SIL OFL — see `src/fonts/opendyslexic/LICENSE`) in both sizes. The dyslexic rules are three pages
 instead of two, because OpenDyslexic is much wider. The site's Letter/A4 toggle picks a default from the browser
 locale and remembers the visitor's choice.
+
+`docroot/play.html` is an online two-player (same device) version of the game. It isn't linked from the main page
+and carries `noindex`. `bin/build_play.py` embeds the printed map's blob geometry so its "Printed map" matches the
+PDF; the page can also generate random maps.
 
 ## Deploying
 
