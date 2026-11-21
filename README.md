@@ -32,6 +32,12 @@ locale and remembers the visitor's choice.
 and carries `noindex`. `bin/build_play.py` embeds the printed map's blob geometry so its "Printed map" matches the
 PDF; the page can also generate random maps.
 
+`docroot/program.html` is another unlinked, `noindex` mode, written by hand rather than built. Each player writes a
+small program for their missile (`left 45`, `right 15`, `advance 4`, and `repeat N` … `end`). Every turn a new
+missile leaves the base pointing straight up and runs the whole program, leaving a trail. It explodes when it touches
+a blob, reaches the map edge, or runs out of instructions. Next turn the player edits their last program and tries
+again. Maps and base positions are random. One `advance` step is one grid square.
+
 Link previews (LinkedIn, Facebook, Slack, iMessage, X) use the Open Graph tags in `bin/build_site.py` and
 `docroot/og-image.png`. After changing them, paste the URL into https://www.linkedin.com/post-inspector/ to check the
 card and refresh LinkedIn's cached copy.

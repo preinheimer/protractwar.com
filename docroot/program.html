@@ -1,0 +1,775 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Program Your Missile – Protractwar</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="description" content="Protractwar, programming edition: write instructions for your missile, watch it fly, then fix your program and try again.">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root { --ink:#1d232b; --muted:#56606c; --blue:#1f5fbf; --blue-l:#dbe7fa; --red:#c8322b; --red-l:#fbdedb;
+  --paper:#fbfcfe; --grid:#e3e8ef; --card:#ffffff; --line:#d6dbe1; --sun:#ffd23f; color-scheme: light;
+  --board-ratio: 0.7736; /* viewBox width / height */
+  --mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; }
+* { box-sizing: border-box; }
+body { margin: 0; color: var(--ink); font-family: 'Nunito', 'Avenir Next', Helvetica, sans-serif; font-size: 17px;
+  line-height: 1.5; background-color: var(--paper);
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 24px 24px; }
+h1, h2, h3 { font-family: 'Baloo 2', 'Arial Rounded MT Bold', sans-serif; line-height: 1.1; margin: 0; }
+a { color: var(--blue); }
+header.top { position: sticky; top: 0; z-index: 5; background: rgba(251,252,254,.92); backdrop-filter: blur(6px);
+  border-bottom: 2px solid var(--ink); }
+header.top .wrap { max-width: 1240px; margin: 0 auto; padding: 0 20px; display: flex; align-items: center;
+  justify-content: space-between; height: 56px; gap: 16px; }
+.logo { font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 25px; text-decoration: none; color: var(--ink); }
+.logo span { color: var(--red); }
+header nav { display: flex; align-items: center; gap: 16px; }
+header nav a { font-weight: 700; text-decoration: none; color: var(--ink); white-space: nowrap; }
+header nav a:hover { color: var(--blue); }
+
+main.game { max-width: 1240px; margin: 0 auto; padding: 20px; display: grid; grid-template-columns: auto minmax(320px, 400px);
+  gap: 24px; justify-content: center; align-items: start; }
+.board { width: calc((100vh - 110px) * var(--board-ratio)); width: calc((100dvh - 110px) * var(--board-ratio));
+  min-width: 320px; max-width: calc(100vw - 384px);
+  background: var(--card); border: 2.5px solid var(--ink); border-radius: 14px; box-shadow: 6px 6px 0 var(--ink); overflow: hidden; }
+.board svg { display: block; width: 100%; height: auto; user-select: none; -webkit-user-select: none; }
+.board text { font-family: 'Nunito', Helvetica, sans-serif; }
+
+.panel { background: var(--card); border: 2.5px solid var(--ink); border-radius: 16px; box-shadow: 6px 6px 0 var(--ink);
+  padding: 20px 22px; display: flex; flex-direction: column; gap: 14px; position: sticky; top: 76px; }
+.panel h2 { font-size: 30px; }
+.panel p { margin: 0; }
+.muted { color: var(--muted); }
+.small { font-size: 15px; }
+.chip { display: inline-flex; align-items: center; gap: 8px; align-self: flex-start; padding: 4px 14px 2px; border-radius: 999px;
+  font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 22px; color: #fff; }
+.chip.blue { background: var(--blue); } .chip.red { background: var(--red); }
+.chip small { font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 14px; opacity: .85; }
+.note { border-radius: 10px; padding: 10px 14px; font-size: 15px; background: var(--blue-l); }
+.note.warn { background: #fff4c2; }
+.note.hit { background: var(--sun); font-weight: 800; }
+.btns { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 11px 20px; border-radius: 12px;
+  font: inherit; font-weight: 800; font-size: 18px; border: 2.5px solid var(--ink); box-shadow: 4px 4px 0 var(--ink);
+  background: #fff; color: var(--ink); cursor: pointer; text-decoration: none; transition: transform .1s, box-shadow .1s; }
+.btn:hover { transform: translate(-1px,-1px); box-shadow: 5px 5px 0 var(--ink); }
+.btn:active { transform: translate(2px,2px); box-shadow: 2px 2px 0 var(--ink); }
+.btn:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
+.btn.blue { background: var(--blue); color: #fff; } .btn.red { background: var(--red); color: #fff; }
+.btn.ghost { box-shadow: none; padding: 7px 14px; font-size: 16px; }
+.btn.ghost:hover { transform: none; background: var(--paper); }
+.label { font-weight: 800; margin-bottom: 6px; }
+.win { font-size: 34px; }
+.win.blue { color: var(--blue); } .win.red { color: var(--red); }
+kbd { font-family: var(--mono); font-size: 13px; border: 1.5px solid var(--line); border-bottom-width: 2.5px; border-radius: 5px; padding: 0 5px; }
+
+/* the program editor: line numbers beside a textarea that grows with the program */
+.editor { display: flex; border: 2.5px solid var(--ink); border-radius: 12px; background: #fff; overflow: hidden;
+  font-family: var(--mono); font-size: 16px; line-height: 1.6; max-height: 50vh; overflow-y: auto; }
+.editor:focus-within { outline: 3px solid var(--sun); outline-offset: 1px; }
+.gutter { margin: 0; padding: 8px 8px 8px 10px; text-align: right; color: #98a1ac; background: var(--paper);
+  border-right: 1.5px solid var(--line); user-select: none; -webkit-user-select: none; min-width: 2.8em; list-style: none; }
+.gutter li.bad { color: var(--red); font-weight: 700; }
+.editor textarea { flex: 1; min-width: 0; border: 0; margin: 0; padding: 8px 10px; font: inherit; line-height: inherit; color: var(--ink);
+  background: transparent; resize: none; white-space: pre; overflow-x: auto; overflow-y: hidden; outline: none; }
+.editor textarea::placeholder { color: #b3bbc4; }
+.listing { margin: 0; padding: 8px 0; flex: 1; list-style: none; counter-reset: ln; min-width: 0; overflow-x: auto; }
+.listing li { counter-increment: ln; white-space: pre; padding: 0 10px 0 0; display: flex; }
+.listing li::before { content: counter(ln); flex: none; width: 2.8em; padding-right: 8px; margin-right: 10px; text-align: right;
+  color: #98a1ac; background: var(--paper); border-right: 1.5px solid var(--line); }
+.listing li.on { background: #fff4b8; font-weight: 700; }
+.listing li.on::before { color: var(--ink); background: var(--sun); }
+.errs { margin: 0; padding: 0; list-style: none; color: var(--red); font-weight: 700; font-size: 15px; }
+.errs:empty { display: none; }
+.errs li + li { margin-top: 4px; }
+.loop { font-family: var(--mono); font-size: 14px; color: var(--muted); min-height: 1.5em; }
+
+details.help { border: 2px solid var(--line); border-radius: 12px; padding: 8px 14px; font-size: 15px; }
+details.help summary { font-weight: 800; cursor: pointer; }
+details.help table { border-collapse: collapse; margin: 8px 0 4px; }
+details.help td { padding: 3px 12px 3px 0; vertical-align: top; }
+details.help code, .code { font-family: var(--mono); font-size: 14px; white-space: nowrap; }
+details.help pre { font-family: var(--mono); font-size: 14px; background: var(--paper); border-radius: 8px; padding: 6px 10px; margin: 6px 0; }
+
+@media (max-width: 860px) {
+  main.game { grid-template-columns: 1fr; gap: 18px; padding: 16px; }
+  .board { justify-self: center; min-width: 0; max-width: 100%;
+    width: min(100%, calc(58vh * var(--board-ratio))); width: min(100%, calc(58dvh * var(--board-ratio))); }
+  .panel { position: static; padding: 16px; }
+  .panel h2 { font-size: 26px; }
+}
+@media (max-width: 520px) {
+  header.top .wrap { padding: 0 16px; }
+  .logo { font-size: 22px; }
+  .hide-s { display: none; }
+}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="logo" href="/">Protract<span>war</span></a>
+  <nav><a class="hide-s" href="/#play">How to play</a><button class="btn ghost" type="button" id="newgame">New game</button></nav>
+</div></header>
+
+<main class="game">
+  <div class="board">
+    <svg id="board" viewBox="-1.5 -1.5 41 53" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Game map">
+      <defs>
+        <pattern id="grid" width="1" height="1" patternUnits="userSpaceOnUse">
+          <path d="M 1 0 L 0 0 0 1" fill="none" stroke="#d3dae2" stroke-width="0.04"/>
+        </pattern>
+        <pattern id="grid5" width="5" height="5" patternUnits="userSpaceOnUse">
+          <path d="M 5 0 L 0 0 0 5" fill="none" stroke="#b9c3ce" stroke-width="0.07"/>
+        </pattern>
+        <clipPath id="mapclip"><rect x="0" y="0" width="38" height="50"/></clipPath>
+      </defs>
+      <rect x="0" y="0" width="38" height="50" fill="#fff"/>
+      <rect x="0" y="0" width="38" height="50" fill="url(#grid)"/>
+      <rect x="0" y="0" width="38" height="50" fill="url(#grid5)"/>
+      <g id="obstacles" clip-path="url(#mapclip)"></g>
+      <g id="bases"></g>
+      <g id="paths"></g>
+      <g id="flight"></g>
+      <rect x="0" y="0" width="38" height="50" fill="none" stroke="#8a94a0" stroke-width="0.1"/>
+      <g id="fx"></g>
+    </svg>
+  </div>
+  <aside class="panel" id="panel" aria-live="polite"></aside>
+</main>
+
+<script>
+(function () {
+"use strict";
+
+// ---------- constants ----------
+// Map units are grid squares: "advance 4" flies 4 squares. The map is 38 x 50 squares (19 x 25 cm on paper).
+var W = 38, H = 50;
+var BASE = 2;                       // bases are 2 x 2 squares
+var STOP_EPS = 2e-4;                // a missile stopped by a blob rests this far outside it
+var MAX_STEPS = 10000;              // instructions run per launch, so a runaway loop can't hang the page
+var MAX_REPEAT = 1000;
+var SPEED = 14;                     // squares per second while flying
+var TURN_SPEED = 540;               // degrees per second while turning
+var MAX_FLIGHT_MS = 9000;           // long programs fly faster
+var INK = "#1d232b", BLOB_F = "#e4e8ed", BLOB_S = "#4a5260";
+var EXAMPLE = "left 45\nadvance 4\nright 15\nadvance 10\nleft 120\nadvance 20";
+var PLAYERS = {
+  blue: { name: "Blue", color: "#1f5fbf", light: "#dbe7fa" },
+  red:  { name: "Red", color: "#c8322b", light: "#fbdedb" }
+};
+var OTHER = { blue: "red", red: "blue" };
+var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+var finePointer = window.matchMedia && window.matchMedia("(pointer: fine)").matches;
+
+// ---------- geometry ----------
+// Angles are in degrees, counter-clockwise on screen, 0 = pointing right, 90 = straight up. SVG y grows downward.
+function rad(d) { return d * Math.PI / 180; }
+function dirOf(h) { return { x: Math.cos(rad(h)), y: -Math.sin(rad(h)) }; }
+function cross(a, b) { return a.x * b.y - a.y * b.x; }
+function f(n) { return Math.round(n * 1000) / 1000; }
+function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+function baseCentre(k) { var b = state.bases[k]; return { x: b[0] + BASE / 2, y: b[1] + BASE / 2 }; }
+
+// Same blob shape as the printed map (bin/build_protractwar.py: blob_r).
+function blobPoly(cx, cy, R, seed) {
+  var n = 160, pts = [];
+  for (var i = 0; i < n; i++) {
+    var t = 2 * Math.PI * i / n;
+    var r = R * (1 + 0.16 * Math.sin(3 * t + seed) + 0.09 * Math.sin(5 * t + 2 * seed) + 0.06 * Math.cos(2 * t + seed * 0.7));
+    pts.push({ x: cx + r * Math.cos(t), y: cy + r * Math.sin(t) });
+  }
+  return pts;
+}
+
+function pointInPoly(p, poly) {
+  var inside = false;
+  for (var i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    var a = poly[i], b = poly[j];
+    if ((a.y > p.y) !== (b.y > p.y) && p.x < (b.x - a.x) * (p.y - a.y) / (b.y - a.y) + a.x) inside = !inside;
+  }
+  return inside;
+}
+
+// How far can a missile at p fly in unit direction d before it touches a blob or the edge of the map?
+function castRay(p, d) {
+  var tEdge = Infinity;
+  if (d.x > 1e-12) tEdge = Math.min(tEdge, (W - p.x) / d.x);
+  if (d.x < -1e-12) tEdge = Math.min(tEdge, -p.x / d.x);
+  if (d.y > 1e-12) tEdge = Math.min(tEdge, (H - p.y) / d.y);
+  if (d.y < -1e-12) tEdge = Math.min(tEdge, -p.y / d.y);
+  tEdge = Math.max(0, tEdge);
+  var tBlob = Infinity;
+  for (var k = 0; k < state.obstacles.length; k++) {
+    var poly = state.obstacles[k].pts;
+    if (pointInPoly(p, poly)) return { t: 0, by: "blob" };
+    for (var i = 0; i < poly.length; i++) {
+      var a = poly[i], b = poly[(i + 1) % poly.length];
+      var e = { x: b.x - a.x, y: b.y - a.y }, den = cross(d, e);
+      if (Math.abs(den) < 1e-12) continue;
+      var w = { x: a.x - p.x, y: a.y - p.y };
+      var t = cross(w, e) / den, u = cross(w, d) / den;
+      if (t > 1e-9 && u >= -1e-9 && u <= 1 + 1e-9 && t < tBlob) tBlob = t;
+    }
+  }
+  if (tBlob <= tEdge) return { t: Math.max(0, tBlob - STOP_EPS), by: "blob" };
+  return { t: tEdge, by: "edge" };
+}
+
+// Where does segment a->b first enter the rectangle? Returns the parameter (0..1) or null (Liang-Barsky).
+function segRect(a, b, x0, y0, x1, y1) {
+  var t0 = 0, t1 = 1, dx = b.x - a.x, dy = b.y - a.y;
+  var P = [-dx, dx, -dy, dy], Q = [a.x - x0, x1 - a.x, a.y - y0, y1 - a.y];
+  for (var i = 0; i < 4; i++) {
+    if (P[i] === 0) { if (Q[i] < 0) return null; continue; }
+    var r = Q[i] / P[i];
+    if (P[i] < 0) { if (r > t1) return null; if (r > t0) t0 = r; }
+    else { if (r < t0) return null; if (r < t1) t1 = r; }
+  }
+  return t0;
+}
+
+function closestOnSeg(c, a, b) {
+  var dx = b.x - a.x, dy = b.y - a.y, L2 = dx * dx + dy * dy;
+  var t = L2 ? Math.max(0, Math.min(1, ((c.x - a.x) * dx + (c.y - a.y) * dy) / L2)) : 0;
+  return { x: a.x + t * dx, y: a.y + t * dy };
+}
+
+// ---------- maps ----------
+// Blue's base somewhere in the bottom third, red's in the top third, well apart, on whole grid squares.
+function randomBases() {
+  var rnd = Math.random, best = null;
+  for (var i = 0; i < 200; i++) {
+    var blue = [2 + Math.floor(rnd() * (W - 3 - BASE)), Math.round(H * 0.66) + Math.floor(rnd() * (H - 2 - BASE - Math.round(H * 0.66)))];
+    var red = [2 + Math.floor(rnd() * (W - 3 - BASE)), 2 + Math.floor(rnd() * (Math.round(H * 0.34) - BASE - 1))];
+    var d = Math.hypot(blue[0] - red[0], blue[1] - red[1]);
+    if (!best || d > best.d) best = { blue: blue, red: red, d: d };
+    if (d >= 28) break;
+  }
+  return { blue: best.blue, red: best.red };
+}
+
+// Blobs in the style of the printed map: a big one near the middle, some touching the edges, and none close
+// to either base.
+function randomObstacles(bases) {
+  var centres = ["blue", "red"].map(function (k) { return { x: bases[k][0] + BASE / 2, y: bases[k][1] + BASE / 2 }; });
+  var placed = [], rnd = Math.random;
+  function tryPlace(x, y, R) {
+    if (centres.some(function (b) { return Math.hypot(x - b.x, y - b.y) < 6.4 + R; })) return false;
+    if (placed.some(function (q) { return Math.hypot(x - q.x, y - q.y) < 1.3 * (R + q.R) + 1; })) return false;
+    placed.push({ x: x, y: y, R: R, seed: rnd() * 6.28 });
+    return true;
+  }
+  var tries = 0;
+  while (!tryPlace(W / 2 + (rnd() - 0.5) * 8, H / 2 + (rnd() - 0.5) * 10, 1.9 + rnd() * 0.4) && tries++ < 200) {}
+  var edged = 0; tries = 0;
+  while (edged < 5 && tries++ < 2000) {            // centred on an edge, so they touch it
+    var side = Math.floor(rnd() * 4), R = 1.4 + rnd() * 0.8, s = rnd();
+    var x = side === 0 ? 0 : side === 1 ? W : s * W, y = side === 2 ? 0 : side === 3 ? H : s * H;
+    if (side < 2) y = s * H;
+    if (tryPlace(x, y, R)) edged++;
+  }
+  var big = 0; tries = 0;
+  while (big < 6 && tries++ < 2000) if (tryPlace(rnd() * W, rnd() * H, 1.3 + rnd() * 0.9)) big++;
+  var small = 0; tries = 0;
+  while (small < 14 && tries++ < 4000) if (tryPlace(rnd() * W, rnd() * H, 0.8 + rnd() * 0.9)) small++;
+  return placed.map(function (b) { return { pts: blobPoly(b.x, b.y, b.R, b.seed) }; });
+}
+
+// ---------- the language ----------
+// One instruction per line, case doesn't matter:
+//   left N / right N      turn N degrees (0-360)
+//   advance N             fly N grid squares
+//   repeat N ... end      run the lines in between N times (can be nested)
+// Line numbers like "1." and comments after "#" are ignored, as are units like "45°", "45 degrees", "4 squares".
+var NUM = "(\\d+(?:\\.\\d*)?|\\.\\d+)";
+var RULES = [
+  { re: new RegExp("^(left|right)\\s+" + NUM + "\\s*(?:°|deg|degs|degree|degrees)?$"), make: function (m) {
+      var n = +m[2];
+      if (n > 360) return "turn at most 360 degrees";
+      return { op: "turn", by: m[1] === "left" ? n : -n };
+    } },
+  { re: new RegExp("^advance\\s+" + NUM + "\\s*(?:square|squares|step|steps)?$"), make: function (m) {
+      var n = +m[1];
+      if (n > 1000) return "that's too far, even for a missile";
+      return { op: "move", dist: n };
+    } },
+  { re: new RegExp("^repeat\\s+" + NUM + "\\s*(?:times|x)?$"), make: function (m) {
+      var n = +m[1];
+      if (n !== Math.floor(n) || n < 1) return "repeat needs a whole number, like repeat 3";
+      if (n > MAX_REPEAT) return "repeat at most " + MAX_REPEAT + " times";
+      return { op: "repeat", times: n, body: [] };
+    } },
+  { re: /^end(?:\s+repeat)?$/, make: function () { return { op: "end" }; } }
+];
+var NEEDS_NUMBER = { left: "left 45", right: "right 15", advance: "advance 4", repeat: "repeat 3" };
+
+function parse(src) {
+  var root = [], stack = [{ body: root, line: 0 }], errors = [];
+  src.split("\n").forEach(function (raw, i) {
+    var line = i + 1;
+    var s = raw.replace(/#.*/, "").trim().toLowerCase().replace(/^\d+\s*[.):]\s*/, "").replace(/\s+/g, " ");
+    if (!s) return;
+    for (var r = 0; r < RULES.length; r++) {
+      var m = s.match(RULES[r].re);
+      if (!m) continue;
+      var node = RULES[r].make(m);
+      if (typeof node === "string") { errors.push({ line: line, text: node }); return; }
+      node.line = line;
+      if (node.op === "end") {
+        if (stack.length === 1) errors.push({ line: line, text: "this end doesn’t have a repeat to finish" });
+        else stack.pop();
+      } else {
+        stack[stack.length - 1].body.push(node);
+        if (node.op === "repeat") stack.push({ body: node.body, line: line });
+      }
+      return;
+    }
+    var word = s.split(" ")[0];
+    if (NEEDS_NUMBER[word] && !/\d/.test(s)) errors.push({ line: line, text: "“" + word + "” needs a number, like " + NEEDS_NUMBER[word] });
+    else if (NEEDS_NUMBER[word] || word === "end") errors.push({ line: line, text: "I can’t read “" + raw.trim() + "”. Try " + (NEEDS_NUMBER[word] || "end") });
+    else errors.push({ line: line, text: "“" + word + "” isn’t an instruction. Use left, right, advance, repeat or end" });
+  });
+  for (var j = stack.length - 1; j > 0; j--) errors.push({ line: stack[j].line, text: "this repeat needs an end" });
+  if (!errors.length && !hasMove(root)) errors.push({ line: 0, text: "Your missile needs at least one advance to go anywhere." });
+  errors.sort(function (a, b) { return a.line - b.line; });
+  return { prog: root, errors: errors };
+}
+function hasMove(list) {
+  return list.some(function (n) { return n.op === "move" ? n.dist > 0 : n.op === "repeat" && hasMove(n.body); });
+}
+
+// Fly a program from k's base. Returns the events to animate and how the flight ended:
+//   end.kind = "hit" (the other base), "blob", "edge", or "done" (out of instructions)
+function run(prog, k) {
+  var pos = baseCentre(k), heading = 90, events = [], steps = 0, end = null, hit = null;
+  var ob = state.bases[OTHER[k]];
+  function exec(list) {
+    for (var i = 0; i < list.length; i++) {
+      var n = list[i];
+      if (++steps > MAX_STEPS) throw new Error("toolong");
+      if (n.op === "turn") {
+        events.push({ type: "turn", line: n.line, from: heading, to: heading + n.by });
+        heading += n.by;
+      } else if (n.op === "move") {
+        if (n.dist <= 0) continue;
+        var d = dirOf(heading), ray = castRay(pos, d), travel = Math.min(n.dist, ray.t);
+        var to = { x: pos.x + d.x * travel, y: pos.y + d.y * travel };
+        var t = travel > 1e-9 ? segRect(pos, to, ob[0], ob[1], ob[0] + BASE, ob[1] + BASE) : null;
+        if (t != null) {
+          var at = { x: pos.x + (to.x - pos.x) * t, y: pos.y + (to.y - pos.y) * t }, c = baseCentre(OTHER[k]);
+          var closest = closestOnSeg(c, pos, to);
+          events.push({ type: "move", line: n.line, a: pos, b: at, heading: heading });
+          hit = { at: at, closest: closest, d: dist(c, closest) };
+          end = { kind: "hit", line: n.line, at: at };
+          return false;
+        }
+        events.push({ type: "move", line: n.line, a: pos, b: to, heading: heading });
+        pos = to;
+        if (travel < n.dist - 1e-9) { end = { kind: ray.by, line: n.line, at: pos }; return false; }
+      } else if (n.op === "repeat") {
+        for (var r = 0; r < n.times; r++) {
+          events.push({ type: "loop", line: n.line, i: r + 1, n: n.times });
+          if (!exec(n.body)) return false;
+        }
+      }
+    }
+    return true;
+  }
+  if (exec(prog)) end = { kind: "done", line: lastLine(prog), at: pos };
+  return { events: events, end: end, hit: hit, heading: heading };
+}
+function lastLine(list) {
+  var n = list[list.length - 1];
+  return n ? (n.op === "repeat" ? Math.max(n.line, lastLine(n.body)) : n.line) : 0;
+}
+
+// ---------- state ----------
+var state = {
+  phase: "setup",            // setup | code | flying | over
+  bases: null, obstacles: [],
+  first: "blue", turn: "blue", round: 1,
+  players: {},
+  pendingHit: null,          // first player's hit, waiting to see if the second player ties it
+  note: null,                // { text, kind } shown at the top of the next turn
+  errors: [],
+  flight: null,
+  result: null,
+  anim: 0
+};
+
+function resetPlayers(keepCode) {
+  ["blue", "red"].forEach(function (k) {
+    var old = state.players[k];
+    state.players[k] = { code: keepCode && old ? old.code : "", shots: [], hit: null };
+  });
+}
+resetPlayers(false);
+
+function newMap() {
+  state.bases = randomBases();
+  state.obstacles = randomObstacles(state.bases);
+}
+
+// ---------- rendering: board ----------
+var $ = function (id) { return document.getElementById(id); };
+function el(tag, attrs, text) {
+  var n = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for (var k in attrs) n.setAttribute(k, attrs[k]);
+  if (text != null) n.textContent = text;
+  return n;
+}
+function clear(g) { while (g.firstChild) g.removeChild(g.firstChild); }
+function polyPath(pts) { return "M" + pts.map(function (p) { return f(p.x) + " " + f(p.y); }).join("L") + "Z"; }
+function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+
+function drawMap() {
+  var g = $("obstacles"); clear(g);
+  state.obstacles.forEach(function (o) {
+    g.appendChild(el("path", { d: polyPath(o.pts), fill: BLOB_F, stroke: BLOB_S, "stroke-width": 0.1, "stroke-linejoin": "round" }));
+  });
+  var b = $("bases"); clear(b);
+  ["blue", "red"].forEach(function (k) {
+    var P = PLAYERS[k], r = state.bases[k], c = baseCentre(k);
+    b.appendChild(el("rect", { x: r[0], y: r[1], width: BASE, height: BASE, fill: P.light, stroke: P.color, "stroke-width": 0.12 }));
+    b.appendChild(el("circle", { cx: c.x, cy: c.y, r: 0.18, fill: P.color }));
+    // every missile starts here, pointing straight up
+    b.appendChild(el("path", { d: "M" + c.x + " " + (r[1] - 0.4) + "V" + (r[1] - 2.6), stroke: P.color, "stroke-width": 0.12,
+      "stroke-dasharray": "0.3 0.25", opacity: 0.6 }));
+    b.appendChild(el("path", { d: "M" + (c.x - 0.45) + " " + (r[1] - 2.2) + "L" + c.x + " " + (r[1] - 2.85) + "L" + (c.x + 0.45) + " " + (r[1] - 2.2),
+      fill: "none", stroke: P.color, "stroke-width": 0.14, "stroke-linecap": "round", "stroke-linejoin": "round", opacity: 0.6 }));
+  });
+}
+
+function burst(c, r1, r2, fill, stroke) {
+  var pts = [];
+  for (var i = 0; i < 16; i++) { var r = i % 2 ? r2 : r1, t = Math.PI * i / 8; pts.push(f(c.x + r * Math.cos(t)) + "," + f(c.y + r * Math.sin(t))); }
+  return el("polygon", { points: pts.join(" "), fill: fill, stroke: stroke, "stroke-width": 0.1, "stroke-linejoin": "round" });
+}
+function burstHit(c, col) {
+  var g = el("g", {});
+  g.appendChild(burst(c, 1.7, 0.85, "#ffd23f", col));
+  g.appendChild(el("text", { x: f(c.x), y: f(c.y + 0.26), "font-size": 0.72, "font-weight": 800, "text-anchor": "middle", fill: col }, "HIT!"));
+  return g;
+}
+function pointsAttr(pts) { return pts.map(function (p) { return f(p.x) + "," + f(p.y); }).join(" "); }
+
+// Every missile so far stays on the map: older ones faded, each player's latest one strong.
+function drawPaths() {
+  var g = $("paths"); clear(g);
+  ["blue", "red"].forEach(function (k) {
+    var shots = state.players[k].shots, col = PLAYERS[k].color;
+    shots.forEach(function (s, i) {
+      var latest = i === shots.length - 1, sg = el("g", { opacity: latest ? 1 : 0.28 });
+      if (s.pts.length > 1) sg.appendChild(el("polyline", { points: pointsAttr(s.pts), fill: "none", stroke: col,
+        "stroke-width": latest ? 0.2 : 0.14, "stroke-linecap": "round", "stroke-linejoin": "round" }));
+      if (s.end.kind === "hit") sg.appendChild(burstHit(s.end.at, col));
+      else sg.appendChild(burst(s.end.at, latest ? 0.75 : 0.55, latest ? 0.36 : 0.26, "#ffd23f", col));
+      g.appendChild(sg);
+    });
+  });
+}
+
+function missileShape(p, heading, col) {
+  return el("path", { d: "M1.1 0 L-0.6 -0.55 L-0.25 0 L-0.6 0.55 Z", fill: col, stroke: "#fff", "stroke-width": 0.12,
+    "stroke-linejoin": "round", "paint-order": "stroke",
+    transform: "translate(" + f(p.x) + " " + f(p.y) + ") rotate(" + f(-heading) + ")" });
+}
+
+function drawFx() {
+  var g = $("fx"); clear(g);
+  if (state.phase !== "over" || !state.result || !state.result.tie) return;
+  // tie-break: show how close each missile's last line passed to the dot in the middle of the base
+  ["blue", "red"].forEach(function (k) {
+    var hit = state.players[k].hit, c = baseCentre(OTHER[k]);
+    g.appendChild(el("line", { x1: f(c.x), y1: f(c.y), x2: f(hit.closest.x), y2: f(hit.closest.y), stroke: INK, "stroke-width": 0.1, "stroke-dasharray": "0.2 0.16" }));
+  });
+}
+
+function fmtSq(n) { var v = Math.round(n * 10) / 10; return v + (v === 1 ? " square" : " squares"); }
+
+// ---------- rendering: panel ----------
+function chip() {
+  var k = state.turn;
+  return '<span class="chip ' + k + '">' + PLAYERS[k].name + "’s turn <small>Round " + state.round + "</small></span>";
+}
+function noteHtml() {
+  return state.note ? '<p class="note ' + (state.note.kind || "") + '">' + state.note.text + "</p>" : "";
+}
+function outcome(end) {
+  var where = end.line ? " on line " + end.line : "";
+  return end.kind === "hit" ? "hit the base" + where + "!" :
+    end.kind === "blob" ? "hit a blob" + where :
+    end.kind === "edge" ? "reached the edge of the map" + where :
+    "ran out of instructions and exploded";
+}
+
+var HELP =
+  '<details class="help"><summary>Instructions you can use</summary><table>' +
+  "<tr><td><code>left 45</code></td><td>turn left 45°</td></tr>" +
+  "<tr><td><code>right 15</code></td><td>turn right 15°</td></tr>" +
+  "<tr><td><code>advance 4</code></td><td>fly forward 4 grid squares</td></tr>" +
+  "<tr><td><code>repeat 3</code><br><code>end</code></td><td>do the lines in between 3 times</td></tr></table>" +
+  '<p class="muted">Every missile starts in the middle of your base, pointing straight up. It explodes when it touches a blob, ' +
+  "reaches the edge of the map, or runs out of instructions. The thick grid lines are every 5 squares.</p>" +
+  "<p style=\"margin-top:6px\">Example:</p><pre>" + EXAMPLE + "</pre>" +
+  '<p class="muted">Line numbers (<code>1.</code>) and notes after <code>#</code> are ignored.</p></details>';
+
+function editorHtml(code, bad) {
+  var n = Math.max(7, code.split("\n").length), nums = "";
+  for (var i = 1; i <= n; i++) nums += "<li" + (bad[i] ? ' class="bad"' : "") + ">" + i + "</li>";
+  return '<div class="editor"><ol class="gutter" id="gutter" aria-hidden="true">' + nums + "</ol>" +
+    '<textarea id="code" rows="' + n + '" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" ' +
+    'aria-label="Your missile program, one instruction per line" placeholder="' + esc("For example:\n" + EXAMPLE) + '">' + esc(code) + "</textarea></div>";
+}
+
+function renderPanel() {
+  var p = $("panel"), k = state.turn, pl = state.players[k];
+  if (state.phase === "setup") {
+    p.innerHTML =
+      "<h2>Program your missile</h2>" +
+      '<p class="muted small">Two players, one screen. Write instructions for your missile, launch it, and watch where it goes. ' +
+      "Next turn, fix your program and try again. Hit the other player’s base first to win!</p>" +
+      '<div class="btns"><button type="button" class="btn ghost" data-act="shuffle">🎲 New map</button></div>' +
+      '<div><div class="label">Who wrote a computer program most recently?</div><p class="muted small" style="margin-bottom:10px">They go first.</p>' +
+      '<div class="btns"><button type="button" class="btn blue" data-start="blue">Blue goes first</button>' +
+      '<button type="button" class="btn red" data-start="red">Red goes first</button></div></div>' + HELP;
+    return;
+  }
+  if (state.phase === "code") {
+    var last = pl.shots[pl.shots.length - 1], bad = {};
+    state.errors.forEach(function (e) { bad[e.line] = true; });
+    var intro = last ? "<p><b>Your last program is below.</b> Change it and try again.</p>" +
+        '<p class="muted small">Last time your missile ' + outcome(last.end) + ".</p>" :
+      "<p><b>Write your missile’s program</b>, one instruction per line. It starts in the middle of your base, pointing straight up ↑.</p>";
+    p.innerHTML = chip() + noteHtml() + intro + editorHtml(pl.code, bad) +
+      '<ul class="errs" id="errs">' + state.errors.slice(0, 4).map(function (e) {
+        return "<li>" + (e.line ? "Line " + e.line + ": " : "") + esc(e.text) + "</li>"; }).join("") + "</ul>" +
+      '<div class="btns"><button type="button" class="btn ' + k + '" data-act="launch">🚀 Launch!</button>' +
+      (finePointer ? '<span class="muted small"><kbd>' + (/Mac|iP/.test(navigator.platform) ? "⌘" : "Ctrl") + "</kbd> + <kbd>Enter</kbd></span>" : "") +
+      "</div>" + HELP;
+    if (finePointer) { var ta = $("code"); ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+    return;
+  }
+  if (state.phase === "flying") {
+    p.innerHTML = chip() + "<p><b>Running your program…</b></p>" +
+      '<div class="editor"><ol class="listing" id="listing">' + pl.code.split("\n").map(function (s) {
+        return "<li>" + (esc(s) || " ") + "</li>"; }).join("") + "</ol></div>" +
+      '<p class="loop" id="loop"></p>' +
+      '<div class="btns"><button type="button" class="btn ghost" data-act="skip">Skip to the end ⏩</button></div>';
+    return;
+  }
+  if (state.phase === "over") {
+    var r = state.result, html = "";
+    html += r.winner ? '<h2 class="win ' + r.winner + '">' + PLAYERS[r.winner].name + " wins! 🎉</h2>" : '<h2 class="win">It’s a draw!</h2>';
+    html += "<p>" + r.text + "</p>";
+    html += '<div class="btns"><button type="button" class="btn blue" data-act="again">Play again</button></div>';
+    html += '<p class="muted small">Don’t forget to say “good game” and shake hands! 🙂</p>';
+    p.innerHTML = html;
+  }
+}
+
+function render() { drawPaths(); clear($("flight")); drawFx(); renderPanel(); }
+
+// ---------- game flow ----------
+function startGame(first) {
+  state.anim++;
+  resetPlayers(false);
+  state.first = first; state.turn = first; state.round = 1;
+  state.pendingHit = null; state.result = null; state.note = null; state.errors = [];
+  state.phase = "code";
+  render();
+}
+
+function toSetup(reroll) {
+  state.anim++;
+  state.phase = "setup";
+  resetPlayers(false);
+  if (reroll) { newMap(); drawMap(); }
+  render();
+}
+
+// Next animation frame, with a timer as a fallback so an animation can never stall (some browsers pause or
+// throttle requestAnimationFrame, e.g. in background tabs or embedded views).
+function nextFrame(cb) {
+  var done = false, raf, timer;
+  function go() { if (done) return; done = true; cancelAnimationFrame(raf); clearTimeout(timer); cb(performance.now()); }
+  raf = requestAnimationFrame(go);
+  timer = setTimeout(go, 50);
+}
+function animate(ms, token, step) {
+  return new Promise(function (resolve) {
+    if (reduceMotion || ms <= 0) { step(1); resolve(true); return; }
+    var t0 = performance.now();
+    function frame(now) {
+      if (token !== state.anim) { resolve(false); return; }
+      var k = Math.min(1, (now - t0) / ms);
+      step(k);
+      if (k < 1) nextFrame(frame); else resolve(true);
+    }
+    nextFrame(frame);
+  });
+}
+
+function launch() {
+  var k = state.turn, pl = state.players[k];
+  var ta = $("code"); if (ta) pl.code = ta.value;
+  var parsed = parse(pl.code), flight;
+  state.errors = parsed.errors;
+  if (!state.errors.length) {
+    try { flight = run(parsed.prog, k); }
+    catch (e) { state.errors = [{ line: 0, text: "That program runs more than " + MAX_STEPS.toLocaleString() + " instructions. Try smaller repeats." }]; }
+  }
+  if (state.errors.length) { renderPanel(); return; }
+  state.note = null;
+  state.flight = flight;
+  state.phase = "flying";
+  render();
+  fly(flight);
+}
+
+// Animate the flight along a timeline: each move takes time in proportion to its length, each turn to its angle.
+function fly(flight) {
+  var col = PLAYERS[state.turn].color, start = baseCentre(state.turn), times = [], total = 0;
+  flight.events.forEach(function (e) {
+    var ms = e.type === "move" ? dist(e.a, e.b) / SPEED * 1000 : e.type === "turn" ? Math.abs(e.to - e.from) / TURN_SPEED * 1000 : 0;
+    times.push(ms); total += ms;
+  });
+  var scale = total > MAX_FLIGHT_MS ? MAX_FLIGHT_MS / total : 1;
+  var g = $("flight"); clear(g);
+  var trail = el("polyline", { fill: "none", stroke: col, "stroke-width": 0.2, "stroke-linecap": "round", "stroke-linejoin": "round" });
+  g.appendChild(trail);
+  var missile = el("g", {}); g.appendChild(missile);
+  var lastLine = -1;
+  function drawAt(k) {
+    var t = k * total, pts = [start], pos = start, heading = 90, line = 0, loop = "";
+    for (var i = 0; i < flight.events.length; i++) {
+      var e = flight.events[i], d = times[i], part = d > 0 ? Math.min(1, t / d) : 1;
+      if (e.type === "loop") loop = "repeat " + e.i + " of " + e.n + " (line " + e.line + ")";
+      line = e.line;
+      if (e.type === "move") {
+        pos = { x: e.a.x + (e.b.x - e.a.x) * part, y: e.a.y + (e.b.y - e.a.y) * part };
+        pts.push(pos); heading = e.heading;
+      } else if (e.type === "turn") heading = e.from + (e.to - e.from) * part;
+      t -= d;
+      if (t < 0) break;
+    }
+    trail.setAttribute("points", pointsAttr(pts));
+    clear(missile); missile.appendChild(missileShape(pos, heading, col));
+    if (line !== lastLine) {
+      var lis = document.querySelectorAll("#listing li");
+      if (lis[lastLine - 1]) lis[lastLine - 1].classList.remove("on");
+      if (lis[line - 1]) { lis[line - 1].classList.add("on"); if (lis[line - 1].scrollIntoView && k < 1) lis[line - 1].scrollIntoView({ block: "nearest" }); }
+      lastLine = line;
+    }
+    var lp = $("loop"); if (lp) lp.textContent = loop;
+  }
+  var token = ++state.anim;
+  state.flight.skip = function () { state.anim++; drawAt(1); land(); };
+  // drawAt works in unscaled time; the clock runs faster when the flight would be long
+  animate(total * scale, token, drawAt).then(function (ok) { if (ok) land(); });
+}
+
+// The missile has exploded: keep its trail, then the same round rules as the paper game.
+function land() {
+  var k = state.turn, pl = state.players[k], fl = state.flight;
+  if (!fl || fl.landed) return;
+  fl.landed = true;
+  var pts = [baseCentre(k)];
+  fl.events.forEach(function (e) { if (e.type === "move") pts.push(e.b); });
+  pl.shots.push({ pts: pts, end: fl.end });
+  pl.hit = fl.hit;
+  var name = PLAYERS[k].name, second = OTHER[state.first];
+  if (k === state.first) {
+    if (pl.hit) {
+      state.pendingHit = k;
+      state.note = { kind: "hit", text: "💥 " + name + " hit " + PLAYERS[second].name + "’s base! " + PLAYERS[second].name +
+        " gets one last turn this round to hit back and tie it." };
+    } else {
+      state.note = { text: name + "’s missile " + outcome(fl.end) + "." };
+    }
+    nextTurn(second);
+    return;
+  }
+  if (state.pendingHit && pl.hit) {
+    var bd = state.players.blue.hit.d, rd = state.players.red.hit.d, diff = Math.abs(bd - rd);
+    var w = diff < 1e-6 ? null : bd < rd ? "blue" : "red";
+    finish(w, "Both players hit a base in the same round, so it comes down to whose missile passed closest to the dot in the middle of the base. " +
+      "Blue: " + fmtSq(bd) + " away. Red: " + fmtSq(rd) + " away.", true);
+  } else if (state.pendingHit) {
+    finish(state.first, PLAYERS[state.first].name + "’s missile hit " + name + "’s base, and " + name + " couldn’t hit back.", false);
+  } else if (pl.hit) {
+    finish(k, name + "’s missile hit " + PLAYERS[state.first].name + "’s base on line " + fl.end.line + "!", false);
+  } else {
+    state.note = { text: name + "’s missile " + outcome(fl.end) + "." };
+    state.round++;
+    nextTurn(state.first);
+  }
+}
+
+function nextTurn(k) {
+  state.turn = k;
+  state.flight = null;
+  state.errors = [];
+  state.phase = "code";
+  render();
+}
+
+function finish(winner, text, tie) {
+  state.flight = null;
+  state.result = { winner: winner, text: text, tie: tie };
+  state.phase = "over";
+  render();
+}
+
+// ---------- input ----------
+$("panel").addEventListener("click", function (e) {
+  var b = e.target.closest("button");
+  if (!b) return;
+  if (b.dataset.start) startGame(b.dataset.start);
+  else if (b.dataset.act === "shuffle") { newMap(); drawMap(); }
+  else if (b.dataset.act === "launch") launch();
+  else if (b.dataset.act === "skip" && state.flight && state.flight.skip) state.flight.skip();
+  else if (b.dataset.act === "again") toSetup(true);
+});
+$("panel").addEventListener("keydown", function (e) {
+  if (e.target.id !== "code") return;
+  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); launch(); }
+});
+$("panel").addEventListener("input", function (e) {
+  if (e.target.id !== "code") return;
+  var ta = e.target;
+  state.players[state.turn].code = ta.value;
+  // grow with the program and keep the line numbers in step
+  var n = Math.max(7, ta.value.split("\n").length), gut = $("gutter");
+  if (+ta.rows !== n) {
+    ta.rows = n;
+    var nums = "";
+    for (var i = 1; i <= n; i++) nums += "<li>" + i + "</li>";
+    gut.innerHTML = nums;
+  }
+  if (state.errors.length) {
+    state.errors = [];
+    $("errs").innerHTML = "";
+    Array.prototype.forEach.call(gut.children, function (li) { li.classList.remove("bad"); });
+  }
+});
+$("newgame").addEventListener("click", function () { toSetup(true); });
+
+// ---------- go ----------
+newMap();
+drawMap();
+render();
+
+// For automated checks.
+window.__protractwar = { state: state, parse: parse, run: run, castRay: castRay, segRect: segRect, startGame: startGame,
+  launch: launch, newMap: function () { newMap(); drawMap(); }, W: W, H: H };
+})();
+</script>
+</body>
+</html>
