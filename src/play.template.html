@@ -82,6 +82,7 @@ main.game { max-width: 1200px; margin: 0 auto; padding: 20px; display: grid; gri
 .label { font-weight: 800; margin-bottom: 6px; }
 .win { font-size: 34px; }
 .win.blue { color: var(--blue); } .win.red { color: var(--red); }
+ul.tie { margin: 0; padding-left: 20px; } b.blue { color: var(--blue); } b.red { color: var(--red); }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 @media (max-width: 820px) {
@@ -330,7 +331,11 @@ function drawPaths() {
       if (s.stopped) g.appendChild(burst(s.b, 0.32, 0.16, "#ffd23f", col));
       g.appendChild(el("circle", { cx: f(s.b.x), cy: f(s.b.y), r: 0.15, fill: col }));
     });
-    if (pl.hit) g.appendChild(burstHit(pl.hit.at, col));
+    if (pl.hit) {   // faded during a tie-break, so the measuring lines show through
+      var hb = burstHit(pl.hit.at, col);
+      if (state.result && state.result.tie) hb.setAttribute("opacity", 0.3);
+      g.appendChild(hb);
+    }
   });
   var active = state.phase === "guess" || state.phase === "measure" || state.phase === "launch";
   if (active) {
@@ -425,6 +430,7 @@ function drawFx() {
   });
 }
 
+function fmtMm(cm) { return cm === 0 ? "0 mm (dead centre!)" : (cm * 10).toFixed(1) + " mm"; }
 function fmtLen(n) { return (Math.round(n * 10) / 10).toFixed(1); }
 function fmtAngle(n) { return String(Math.round(n * 10) / 10); }
 
@@ -492,7 +498,7 @@ function renderPanel() {
   if (state.phase === "over") {
     var r = state.result, html = "";
     if (r.winner) {
-      html += '<h2 class="win ' + r.winner + '">' + PLAYERS[r.winner].name + " wins! 🎉</h2>";
+      html += '<h2 class="win ' + r.winner + '">' + PLAYERS[r.winner].name + (r.tie ? " wins the tie-breaker! 🎉" : " wins! 🎉") + "</h2>";
     } else {
       html += '<h2 class="win">It’s a draw!</h2>';
     }
@@ -615,10 +621,15 @@ function launch() {
   // second player's turn ends the round
   var other = state.players[state.first];
   if (state.pendingHit && pl.hit) {
-    var bd = state.players.blue.hit.d, rd = state.players.red.hit.d, diff = Math.abs(bd - rd);
-    var w = diff < 1e-6 ? null : bd < rd ? "blue" : "red";
-    finish(w, "Both players hit a base in the same round, so it comes down to whose line passed closest to the dot in the middle of the base. " +
-      "Blue: " + fmtLen(bd) + " cm away. Red: " + fmtLen(rd) + " cm away.", true);
+    // measured to a tenth of a millimetre, the precision shown, so equal-looking numbers are a draw
+    var bd = Math.round(state.players.blue.hit.d * 100) / 100, rd = Math.round(state.players.red.hit.d * 100) / 100;
+    var w = bd === rd ? null : bd < rd ? "blue" : "red";
+    finish(w, "<b>Both players hit a base this round, so there’s a tie-breaker:</b> whoever’s line passed closer to the " +
+      "dot in the middle of the base wins. Look closely at each base to see how close each line came.</p>" +
+      '<ul class="tie"><li><b class="blue">Blue</b> missed the dot by ' + fmtMm(bd) + "</li>" +
+      '<li><b class="red">Red</b> missed the dot by ' + fmtMm(rd) + "</li></ul><p>" +
+      (w ? "<b>" + PLAYERS[w].name + "’s line was closer, so " + PLAYERS[w].name + " wins.</b>" :
+        "<b>They’re exactly as close as each other, so it’s a draw.</b>"), true);
   } else if (state.pendingHit) {
     finish(state.first, PLAYERS[state.first].name + "’s missile hit " + PLAYERS[second].name + "’s base, and " +
       PLAYERS[second].name + " couldn’t hit back.", false);

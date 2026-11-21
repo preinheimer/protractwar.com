@@ -67,6 +67,7 @@ main.game { max-width: 1240px; margin: 0 auto; padding: 20px; display: grid; gri
 .label { font-weight: 800; margin-bottom: 6px; }
 .win { font-size: 34px; }
 .win.blue { color: var(--blue); } .win.red { color: var(--red); }
+ul.tie { margin: 0; padding-left: 20px; } b.blue { color: var(--blue); } b.red { color: var(--red); }
 kbd { font-family: var(--mono); font-size: 13px; border: 1.5px solid var(--line); border-bottom-width: 2.5px; border-radius: 5px; padding: 0 5px; }
 
 /* the program editor: line numbers beside a textarea that grows with the program */
@@ -489,7 +490,11 @@ function drawPaths() {
       var latest = i === shots.length - 1, sg = el("g", { opacity: latest ? 1 : 0.28 });
       if (s.pts.length > 1) sg.appendChild(el("polyline", { points: pointsAttr(s.pts), fill: "none", stroke: col,
         "stroke-width": latest ? 0.2 : 0.14, "stroke-linecap": "round", "stroke-linejoin": "round" }));
-      if (s.end.kind === "hit") sg.appendChild(burstHit(s.end.at, col));
+      if (s.end.kind === "hit") {   // faded during a tie-break, so the measuring lines show through
+        var hb = burstHit(s.end.at, col);
+        if (state.result && state.result.tie) hb.setAttribute("opacity", 0.3);
+        sg.appendChild(hb);
+      }
       else sg.appendChild(burst(s.end.at, latest ? 0.75 : 0.55, latest ? 0.36 : 0.26, "#ffd23f", col));
       g.appendChild(sg);
     });
@@ -505,13 +510,17 @@ function missileShape(p, heading, col) {
 function drawFx() {
   var g = $("fx"); clear(g);
   if (state.phase !== "over" || !state.result || !state.result.tie) return;
-  // tie-break: show how close each missile's last line passed to the dot in the middle of the base
+  // tie-break: each missile's last line carried on past where it exploded (dotted, in its colour), and how far
+  // that line passes from the dot in the middle of the base (dashed black)
   ["blue", "red"].forEach(function (k) {
-    var hit = state.players[k].hit, c = baseCentre(OTHER[k]);
+    var hit = state.players[k].hit, c = baseCentre(OTHER[k]), col = PLAYERS[k].color;
+    g.appendChild(el("line", { x1: f(hit.at.x), y1: f(hit.at.y), x2: f(hit.closest.x), y2: f(hit.closest.y), stroke: col, "stroke-width": 0.12, "stroke-dasharray": "0.05 0.25", "stroke-linecap": "round" }));
+    g.appendChild(el("circle", { cx: f(hit.closest.x), cy: f(hit.closest.y), r: 0.16, fill: col }));
     g.appendChild(el("line", { x1: f(c.x), y1: f(c.y), x2: f(hit.closest.x), y2: f(hit.closest.y), stroke: INK, "stroke-width": 0.1, "stroke-dasharray": "0.2 0.16" }));
   });
 }
 
+function fmtSq2(n) { return n === 0 ? "0 squares (dead centre!)" : n.toFixed(2) + (n === 1 ? " square" : " squares"); }
 function fmtSq(n) { var v = Math.round(n * 10) / 10; return v + (v === 1 ? " square" : " squares"); }
 
 // ---------- rendering: panel ----------
@@ -538,6 +547,8 @@ var HELP =
   "<tr><td><code>repeat 3</code><br><code>end</code></td><td>do the lines in between 3 times</td></tr></table>" +
   '<p class="muted">Every missile starts in the middle of your base, pointing straight up. It explodes when it touches a blob, ' +
   "reaches the edge of the map, or runs out of instructions. The thick grid lines are every 5 squares.</p>" +
+  '<p class="muted" style="margin-top:6px">If both players hit a base in the same round, whoever aimed closer to the dot ' +
+  "in the middle of the base wins.</p>" +
   "<p style=\"margin-top:6px\">Example:</p><pre>" + EXAMPLE + "</pre>" +
   '<p class="muted">Line numbers (<code>1.</code>) and notes after <code>#</code> are ignored.</p></details>';
 
@@ -612,7 +623,7 @@ function renderPanel() {
   }
   if (state.phase === "over") {
     var r = state.result, html = "";
-    html += r.winner ? '<h2 class="win ' + r.winner + '">' + PLAYERS[r.winner].name + " wins! 🎉</h2>" : '<h2 class="win">It’s a draw!</h2>';
+    html += r.winner ? '<h2 class="win ' + r.winner + '">' + PLAYERS[r.winner].name + (r.tie ? " wins the tie-breaker! 🎉" : " wins! 🎉") + "</h2>" : '<h2 class="win">It’s a draw!</h2>';
     html += "<p>" + r.text + "</p>";
     html += '<div class="btns"><button type="button" class="btn blue" data-act="again">Play again</button></div>';
     html += '<p class="muted small">Don’t forget to say “good game” and shake hands! 🙂</p>';
@@ -743,10 +754,16 @@ function land() {
     return;
   }
   if (state.pendingHit && pl.hit) {
-    var bd = state.players.blue.hit.d, rd = state.players.red.hit.d, diff = Math.abs(bd - rd);
-    var w = diff < 1e-6 ? null : bd < rd ? "blue" : "red";
-    finish(w, "Both players hit a base in the same round, so it comes down to whose missile passed closest to the dot in the middle of the base. " +
-      "Blue: " + fmtSq(bd) + " away. Red: " + fmtSq(rd) + " away.", true);
+    // measured to a hundredth of a square, the precision shown, so equal-looking numbers are a draw
+    var bd = Math.round(state.players.blue.hit.d * 100) / 100, rd = Math.round(state.players.red.hit.d * 100) / 100;
+    var w = bd === rd ? null : bd < rd ? "blue" : "red";
+    finish(w, "<b>Both missiles hit a base this round, so there’s a tie-breaker:</b> whoever aimed closer to the dot in the " +
+      "middle of the base wins. We measure how close each missile’s last line would have passed the dot if it had kept " +
+      "flying straight. Look closely at each base to see it.</p>" +
+      '<ul class="tie"><li><b class="blue">Blue</b> missed the dot by ' + fmtSq2(bd) + "</li>" +
+      '<li><b class="red">Red</b> missed the dot by ' + fmtSq2(rd) + "</li></ul><p>" +
+      (w ? "<b>" + PLAYERS[w].name + " aimed closer, so " + PLAYERS[w].name + " wins.</b>" :
+        "<b>They’re exactly as close as each other, so it’s a draw.</b>"), true);
   } else if (state.pendingHit) {
     finish(state.first, PLAYERS[state.first].name + "’s missile hit " + name + "’s base, and " + name + " couldn’t hit back.", false);
   } else if (pl.hit) {
@@ -807,7 +824,7 @@ render();
 
 // For automated checks.
 window.__protractwar = { state: state, parse: parse, lineErrors: lineErrors, run: run, castRay: castRay, segRect: segRect, startGame: startGame,
-  launch: launch, newMap: function () { newMap(); drawMap(); }, W: W, H: H };
+  launch: launch, newMap: function () { newMap(); drawMap(); }, drawMap: drawMap, W: W, H: H };
 })();
 </script>
 </body>
