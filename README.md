@@ -36,7 +36,9 @@ PDF; the page can also generate random maps.
 small program for their missile (`left 45`, `right 15`, `advance 4`, and `repeat N` … `end`). Every turn a new
 missile leaves the base pointing straight up and runs the whole program, leaving a trail. It explodes when it touches
 a blob, reaches the map edge, or runs out of instructions. Next turn the player edits their last program and tries
-again. Maps and base positions are random. One `advance` step is one grid square.
+again. Maps and base positions are random. One `advance` step is one grid square. Obstacles default to a mix of
+blobs, hard shapes (triangles, squares, hexagons, stars, walls) and curvy ones (crescents, swooshes, C-shaped arcs,
+spirals); the setup screen can switch to blobs only, like the paper maps.
 
 Link previews (LinkedIn, Facebook, Slack, iMessage, X) use the Open Graph tags in `bin/build_site.py` and
 `docroot/og-image.png`. After changing them, paste the URL into https://www.linkedin.com/post-inspector/ to check the
