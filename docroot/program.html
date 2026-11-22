@@ -65,6 +65,9 @@ main.game { max-width: 1240px; margin: 0 auto; padding: 20px; display: grid; gri
 .btn.ghost { box-shadow: none; padding: 7px 14px; font-size: 16px; }
 .btn.ghost:hover { transform: none; background: var(--paper); }
 .label { font-weight: 800; margin-bottom: 6px; }
+input.level { width: 100%; margin: 4px 0 0; accent-color: var(--ink); cursor: pointer; }
+.ticks { display: flex; justify-content: space-between; font-size: 14px; font-weight: 700; color: var(--muted); }
+.ticks span { width: 4.5em; } .ticks span:nth-child(2) { text-align: center; } .ticks span:last-child { text-align: right; }
 .seg { display: inline-flex; border: 2.5px solid var(--ink); border-radius: 12px; overflow: hidden; }
 .seg button { font: inherit; font-weight: 800; font-size: 16px; padding: 7px 14px; border: 0; background: var(--card); color: var(--ink); cursor: pointer; }
 .seg button + button { border-left: 2.5px solid var(--ink); }
@@ -160,7 +163,16 @@ details.help pre { font-family: var(--mono); font-size: 14px; background: var(--
 // ---------- constants ----------
 // Map units are grid squares: "advance 4" flies 4 squares. The map is 38 x 50 squares (19 x 25 cm on paper).
 var W = 38, H = 50;
-var BASE = 2;                       // bases are 2 x 2 squares
+var BASE = 2;                       // base size in squares: set from the difficulty level by newMap()
+// Difficulty: harder levels have smaller bases and more of the map covered by obstacles. `cover` is the share of the
+// map obstacles aim to fill; `gap` scales the space kept between them (tighter on harder, so more fit); `grow` scales
+// the medium and small obstacles that fill the map up.
+var LEVELS = {
+  easy:   { name: "Easy",   base: 3, cover: 0.10, giants: [0, 1], gap: 1,    grow: 1,   about: "Big bases, open map" },
+  hard:   { name: "Hard",   base: 2, cover: 0.18, giants: [1, 3], gap: 0.8,  grow: 1.4, about: "Smaller bases, more obstacles" },
+  harder: { name: "Harder", base: 1, cover: 0.28, giants: [2, 4], gap: 0.6,  grow: 1.8, about: "Tiny bases, crowded map" }
+};
+var LEVEL_ORDER = ["easy", "hard", "harder"];
 var STOP_EPS = 2e-4;                // a missile stopped by a blob rests this far outside it
 var MAX_STEPS = 10000;              // instructions run per launch, so a runaway loop can't hang the page
 var MAX_REPEAT = 1000;
@@ -204,6 +216,12 @@ function pointInPoly(p, poly) {
     if ((a.y > p.y) !== (b.y > p.y) && p.x < (b.x - a.x) * (p.y - a.y) / (b.y - a.y) + a.x) inside = !inside;
   }
   return inside;
+}
+
+function bbox(poly) {
+  var b = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
+  poly.forEach(function (p) { b.x0 = Math.min(b.x0, p.x); b.y0 = Math.min(b.y0, p.y); b.x1 = Math.max(b.x1, p.x); b.y1 = Math.max(b.y1, p.y); });
+  return b;
 }
 
 // How far can a missile at p fly in unit direction d before it touches a blob or the edge of the map?
@@ -340,21 +358,32 @@ function pickShape(style, rnd) {
 
 // A map in the style of the printed one: something big near the middle, some obstacles touching the edges,
 // and none close to either base. style: "mixed" (all kinds of shapes) or "blobs" (like the paper maps).
-function randomObstacles(bases, style) {
+function randomObstacles(bases, style, level) {
+  var L = LEVELS[level];
   var centres = ["blue", "red"].map(function (k) { return { x: bases[k][0] + BASE / 2, y: bases[k][1] + BASE / 2 }; });
   var placed = [], rnd = Math.random;
+  // how much of the map is covered, measured on a half-square grid of sample points
+  var GX = W * 2, GY = H * 2, covered = new Uint8Array(GX * GY), coveredN = 0;
+  function cover(pts) {
+    var b = bbox(pts);
+    for (var i = Math.max(0, Math.floor(b.x0 * 2)); i < Math.min(GX, Math.ceil(b.x1 * 2)); i++)
+      for (var j = Math.max(0, Math.floor(b.y0 * 2)); j < Math.min(GY, Math.ceil(b.y1 * 2)); j++)
+        if (!covered[j * GX + i] && pointInPoly({ x: i / 2 + 0.25, y: j / 2 + 0.25 }, pts)) { covered[j * GX + i] = 1; coveredN++; }
+  }
   function tryPlace(x, y, R0) {
     var kind = pickShape(style, rnd), R = Math.min(Math.max(R0 * SHAPES[kind].size, SHAPES[kind].min || 0), 8);
-    if (centres.some(function (b) { return Math.hypot(x - b.x, y - b.y) < 6.4 + R; })) return false;
-    if (placed.some(function (q) { return Math.hypot(x - q.x, y - q.y) < 1.3 * (R + q.R) + 1; })) return false;
-    placed.push({ x: x, y: y, R: R, kind: kind, pts: turnPts(SHAPES[kind].make(R, rnd), x, y, rnd() * 2 * Math.PI) });
+    if (centres.some(function (b) { return Math.hypot(x - b.x, y - b.y) < 6.4 + BASE / 2 + R; })) return false;
+    if (placed.some(function (q) { return Math.hypot(x - q.x, y - q.y) < L.gap * (1.3 * (R + q.R) + 1); })) return false;
+    var pts = turnPts(SHAPES[kind].make(R, rnd), x, y, rnd() * 2 * Math.PI);
+    placed.push({ x: x, y: y, R: R, kind: kind, pts: pts });
+    cover(pts);
     return true;
   }
   // sizes are skewed: mostly small, now and then much bigger
   function size(lo, hi) { return lo + (hi - lo) * Math.pow(rnd(), 1.6); }
   var tries = 0;
   while (!tryPlace(W / 2 + (rnd() - 0.5) * 8, H / 2 + (rnd() - 0.5) * 10, size(2, 5)) && tries++ < 200) {}
-  var giants = 0, want = 1 + Math.floor(rnd() * 3); tries = 0;
+  var giants = 0, want = L.giants[0] + Math.floor(rnd() * (L.giants[1] - L.giants[0] + 1)); tries = 0;
   while (giants < want && tries++ < 600) if (tryPlace(rnd() * W, rnd() * H, size(3, 5.5))) giants++;
   var edged = 0; tries = 0;
   while (edged < 5 && tries++ < 2000) {            // centred on an edge, so they touch it
@@ -363,10 +392,10 @@ function randomObstacles(bases, style) {
     if (side < 2) y = s * H;
     if (tryPlace(x, y, R)) edged++;
   }
-  var mid = 0; tries = 0;
-  while (mid < 6 && tries++ < 2000) if (tryPlace(rnd() * W, rnd() * H, size(1.2, 3))) mid++;
-  var small = 0; tries = 0;
-  while (small < 14 && tries++ < 4000) if (tryPlace(rnd() * W, rnd() * H, size(0.5, 1.6))) small++;
+  // then fill up with medium and small ones until enough of the map is covered
+  tries = 0;
+  while (coveredN < L.cover * GX * GY && tries++ < 8000)
+    tryPlace(rnd() * W, rnd() * H, L.grow * (rnd() < 0.35 ? size(1.2, 3) : size(0.5, 1.6)));
   return placed.map(function (b) { return { kind: b.kind, pts: b.pts }; });
 }
 
@@ -498,7 +527,7 @@ function lastLine(list) {
 // ---------- state ----------
 var state = {
   phase: "setup",            // setup | code | flying | over
-  bases: null, obstacles: [], style: "mixed",
+  bases: null, obstacles: [], style: "mixed", level: "easy",
   first: "blue", turn: "blue", round: 1,
   players: {},
   pendingHit: null,          // first player's hit, waiting to see if the second player ties it
@@ -518,8 +547,9 @@ function resetPlayers(keepCode) {
 resetPlayers(false);
 
 function newMap() {
+  BASE = LEVELS[state.level].base;
   state.bases = randomBases();
-  state.obstacles = randomObstacles(state.bases, state.style);
+  state.obstacles = randomObstacles(state.bases, state.style, state.level);
 }
 
 // ---------- rendering: board ----------
@@ -677,6 +707,12 @@ function renderPanel() {
       "<h2>Program your missile</h2>" +
       '<p class="muted small">Two players, one screen. Write instructions for your missile, launch it, and watch where it goes. ' +
       "Next turn, fix your program and try again. Hit the other player’s base first to win!</p>" +
+      '<div><label class="label" for="level">Difficulty: <span id="levelname">' + LEVELS[state.level].name + "</span></label>" +
+      '<input type="range" id="level" class="level" min="0" max="2" step="1" list="levelticks" value="' + LEVEL_ORDER.indexOf(state.level) + '" ' +
+      'aria-valuetext="' + LEVELS[state.level].name + '">' +
+      '<datalist id="levelticks"><option value="0"></option><option value="1"></option><option value="2"></option></datalist>' +
+      '<div class="ticks" aria-hidden="true">' + LEVEL_ORDER.map(function (k) { return "<span>" + LEVELS[k].name + "</span>"; }).join("") + "</div>" +
+      '<p class="muted small" id="levelabout">' + LEVELS[state.level].about + ".</p></div>" +
       '<div><div class="label">Obstacles</div><div class="btns">' +
       '<div class="seg" role="group" aria-label="Obstacles"><button type="button" data-style="mixed" aria-pressed="' + (state.style === "mixed") + '">Mixed shapes</button>' +
       '<button type="button" data-style="blobs" aria-pressed="' + (state.style === "blobs") + '">Blobs only</button></div>' +
@@ -893,6 +929,15 @@ $("panel").addEventListener("keydown", function (e) {
   if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); launch(); }
 });
 $("panel").addEventListener("input", function (e) {
+  if (e.target.id === "level") {     // a new map straight away, so you can see the difference
+    state.level = LEVEL_ORDER[+e.target.value];
+    var L = LEVELS[state.level];
+    $("levelname").textContent = L.name;
+    $("levelabout").textContent = L.about + ".";
+    e.target.setAttribute("aria-valuetext", L.name);
+    newMap(); drawMap();
+    return;
+  }
   if (e.target.id !== "code") return;
   state.players[state.turn].code = e.target.value;
   state.errors = [];
@@ -911,7 +956,7 @@ drawMap();
 render();
 
 // For automated checks.
-window.__protractwar = { SHAPES: SHAPES, turnPts: turnPts, state: state, parse: parse, lineErrors: lineErrors, run: run, castRay: castRay, segRect: segRect, startGame: startGame,
+window.__protractwar = { LEVELS: LEVELS, baseSize: function () { return BASE; }, SHAPES: SHAPES, turnPts: turnPts, state: state, parse: parse, lineErrors: lineErrors, run: run, castRay: castRay, segRect: segRect, startGame: startGame,
   launch: launch, newMap: function () { newMap(); drawMap(); }, drawMap: drawMap, W: W, H: H };
 })();
 </script>
