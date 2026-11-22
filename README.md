@@ -39,7 +39,7 @@ a blob, reaches the map edge, or runs out of instructions. Next turn the player 
 again. Maps and base positions are random. One `advance` step is one grid square. Obstacles default to a mix of
 blobs, hard shapes (triangles, squares, hexagons, stars, walls) and curvy ones (crescents, swooshes, C-shaped arcs,
 spirals); the setup screen can switch to blobs only, like the paper maps. A difficulty slider (Easy / Hard / Harder)
-shrinks the bases (3, 2, then 1 square across) and covers more of the map with obstacles (about 10%, 18%, then 28%), and lets obstacles come closer to the bases.
+shrinks the bases (3, 2, then 1 square across) and covers more of the map with obstacles (about 10%, 18%, then 28%), and lets obstacles come closer to the bases. Obstacles never touch: there are always at least 1.5 squares between any two (1.2 on Harder).
 
 Link previews (LinkedIn, Facebook, Slack, iMessage, X) use the Open Graph tags in `bin/build_site.py` and
 `docroot/og-image.png`. After changing them, paste the URL into https://www.linkedin.com/post-inspector/ to check the
